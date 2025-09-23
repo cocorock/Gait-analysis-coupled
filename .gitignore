@@ -1,0 +1,17 @@
+# Personal Access Token - sensitive information
+PAT.txt
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Generated model files
+*.pkl
+
+# External dependencies
+TaskParameterizedGaussianMixtureModels/
+
+# Temporary files
+*.tmp
+*.temp
