@@ -4,10 +4,10 @@ from typing import Any, Dict, Iterable, List, Tuple
 import numpy as np
 from numpy import ndarray
 
-from tpgmm.utils.learning_modules import RegressionModel
-from tpgmm.utils.stochastic import multivariate_gauss_cdf
-from tpgmm.utils.arrays import get_subarray, identity_like
-from tpgmm.tpgmm.tpgmm import TPGMM
+from utils.learning_modules import RegressionModel
+from utils.stochastic import multivariate_gauss_cdf
+from utils.arrays import get_subarray, identity_like
+from tpgmm import TPGMM
 
 
 class GaussianMixtureRegression(RegressionModel):
