@@ -281,7 +281,12 @@ def main():
     
     # Configuration
     json_path = "/home/jemajuinta/ws/Gait-analysis-coupled/alpha/Gait Data/4D/gait_analysis_export_subject35.json"
-    model_save_path = "/home/jemajuinta/ws/Gait-analysis-coupled/gait_tpgmm_model_final.pkl"
+    
+    # Create pkls directory if it doesn't exist
+    pkls_dir = "/home/jemajuinta/ws/Gait-analysis-coupled/pkls"
+    os.makedirs(pkls_dir, exist_ok=True)
+    
+    model_save_path = os.path.join(pkls_dir, "gait_tpgmm_model_final.pkl")
     
     print(f"JSON data path: {json_path}")
     print(f"Model save path: {model_save_path}")
