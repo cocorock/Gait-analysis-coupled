@@ -418,7 +418,8 @@ def main():
     print("=== Simplified Gait Analysis GMR Trajectory Recovery ===")
     
     # Configuration
-    model_path = "/home/jemajuinta/ws/Gait-analysis-coupled/gait_tpgmm_model_final.pkl"
+    pkls_dir = "/home/jemajuinta/ws/Gait-analysis-coupled/pkls"
+    model_path = os.path.join(pkls_dir, "gait_tpgmm_model_final.pkl")
     
     # Step 1: Load trained model
     print("\nStep 1: Loading trained TPGMM model...")
@@ -474,7 +475,7 @@ def main():
         'output_feature_indices': output_feature_indices
     }
     
-    recovery_save_path = "/home/jemajuinta/ws/Gait-analysis-coupled/gait_simplified_recovery.pkl"
+    recovery_save_path = os.path.join(pkls_dir, "gait_simplified_recovery.pkl")
     with open(recovery_save_path, 'wb') as f:
         pickle.dump(recovery_data, f)
         
