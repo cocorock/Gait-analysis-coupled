@@ -7,7 +7,7 @@ __pycache__/
 *$py.class
 
 # Generated model files
-*.pkl
+#*.pkl
 
 # External dependencies
 TaskParameterizedGaussianMixtureModels/
