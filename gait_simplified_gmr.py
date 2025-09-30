@@ -162,6 +162,183 @@ def apply_pca_to_features(trajectories, feature_names, n_components=2):
     return results
 
 
+def plot_gaussian_models_with_deviations(model_data, predicted_trajectory=None, predicted_covariance=None, save_dir="plots"):
+    """Plot Gaussian models with trajectory deviations shown as shaded areas."""
+    
+    os.makedirs(save_dir, exist_ok=True)
+    
+    tpgmm = model_data['tpgmm']
+    feature_names = model_data['feature_names']
+    
+    # Use the first frame (FR1)
+    frame_idx = 0
+    means = tpgmm.means_[frame_idx]  # Shape: (n_components, n_features)
+    covariances = tpgmm.covariances_[frame_idx]  # Shape: (n_components, n_features, n_features)
+    weights = tpgmm.weights_  # Shape: (n_components,)
+    
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+    
+    # Define colors for each Gaussian component
+    colors = plt.cm.tab10(np.linspace(0, 1, tpgmm._n_components))
+    
+    # Plot recovered trajectory with deviations if provided
+    if predicted_trajectory is not None and predicted_covariance is not None:
+        # Left ankle positions trajectory with uncertainty (dims 4, 5 in predicted_trajectory correspond to dims 5, 6)
+        x_pos = predicted_trajectory[:, 4]
+        y_pos = predicted_trajectory[:, 5]
+        x_std = np.sqrt(predicted_covariance[:, 4, 4])
+        y_std = np.sqrt(predicted_covariance[:, 4, 4])
+        
+        ax1.plot(x_pos, y_pos, 'k-', linewidth=3, alpha=0.8, label='GMR Recovery', zorder=10)
+        ax1.fill_between(x_pos, y_pos - y_std, y_pos + y_std, alpha=0.3, color='gray', label='±1σ deviation', zorder=5)
+        ax1.plot(x_pos[0], y_pos[0], 'ko', markersize=8, label='Start', zorder=11)
+        ax1.plot(x_pos[-1], y_pos[-1], 'ks', markersize=8, label='End', zorder=11)
+    
+    # Plot position Gaussians
+    # Left ankle positions (dims 5, 6)
+    for k in range(tpgmm._n_components):
+        mean_pos = means[k, [5, 6]]  # [left_ankle_pos_x, left_ankle_pos_y]
+        cov_pos = covariances[k][np.ix_([5, 6], [5, 6])]  # 2x2 covariance matrix
+        
+        # Plot mean as point
+        ax1.scatter(mean_pos[0], mean_pos[1], c=[colors[k]], s=100*weights[k]*10, 
+                   alpha=0.8, edgecolors='black', linewidth=1, label=f'Component {k+1}', zorder=5)
+        
+        # Plot covariance as ellipse
+        eigenvals, eigenvecs = np.linalg.eigh(cov_pos)
+        angle = np.degrees(np.arctan2(eigenvecs[1, 0], eigenvecs[0, 0]))
+        width, height = 2 * np.sqrt(eigenvals)  # 1-sigma ellipse
+        
+        ellipse = Ellipse(mean_pos, width, height, angle=angle, 
+                         facecolor=colors[k], alpha=0.3, edgecolor=colors[k], linewidth=2, zorder=1)
+        ax1.add_patch(ellipse)
+    
+    ax1.set_title('Left Ankle Position Gaussians with Deviations\n(Dimensions 5, 6)', fontsize=14, fontweight='bold')
+    ax1.set_xlabel('Left Ankle X Position (m)')
+    ax1.set_ylabel('Left Ankle Y Position (m)')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax1.axis('equal')
+    
+    # Plot recovered trajectory with deviations if provided
+    if predicted_trajectory is not None and predicted_covariance is not None:
+        # Right ankle positions trajectory with uncertainty (dims 0, 1 in predicted_trajectory correspond to dims 1, 2)
+        x_pos = predicted_trajectory[:, 0]
+        y_pos = predicted_trajectory[:, 1]
+        x_std = np.sqrt(predicted_covariance[:, 0, 0])
+        y_std = np.sqrt(predicted_covariance[:, 1, 1])
+        
+        ax2.plot(x_pos, y_pos, 'k-', linewidth=3, alpha=0.8, label='GMR Recovery', zorder=10)
+        ax2.fill_between(x_pos, y_pos - y_std, y_pos + y_std, alpha=0.3, color='gray', label='±1σ deviation', zorder=5)
+        ax2.plot(x_pos[0], y_pos[0], 'ko', markersize=8, label='Start', zorder=11)
+        ax2.plot(x_pos[-1], y_pos[-1], 'ks', markersize=8, label='End', zorder=11)
+    
+    # Right ankle positions (dims 1, 2)
+    for k in range(tpgmm._n_components):
+        mean_pos = means[k, [1, 2]]  # [right_ankle_pos_x, right_ankle_pos_y]
+        cov_pos = covariances[k][np.ix_([1, 2], [1, 2])]  # 2x2 covariance matrix
+        
+        # Plot mean as point
+        ax2.scatter(mean_pos[0], mean_pos[1], c=[colors[k]], s=100*weights[k]*10, 
+                   alpha=0.8, edgecolors='black', linewidth=1, zorder=5)
+        
+        # Plot covariance as ellipse
+        eigenvals, eigenvecs = np.linalg.eigh(cov_pos)
+        angle = np.degrees(np.arctan2(eigenvecs[1, 0], eigenvecs[0, 0]))
+        width, height = 2 * np.sqrt(eigenvals)  # 1-sigma ellipse
+        
+        ellipse = Ellipse(mean_pos, width, height, angle=angle, 
+                         facecolor=colors[k], alpha=0.3, edgecolor=colors[k], linewidth=2, zorder=1)
+        ax2.add_patch(ellipse)
+    
+    ax2.set_title('Right Ankle Position Gaussians with Deviations\n(Dimensions 1, 2)', fontsize=14, fontweight='bold')
+    ax2.set_xlabel('Right Ankle X Position (m)')
+    ax2.set_ylabel('Right Ankle Y Position (m)')
+    ax2.grid(True, alpha=0.3)
+    ax2.axis('equal')
+    
+    # Plot recovered trajectory with deviations if provided
+    if predicted_trajectory is not None and predicted_covariance is not None:
+        # Left ankle velocities trajectory with uncertainty (dims 6, 7 in predicted_trajectory correspond to dims 7, 8)
+        x_vel = predicted_trajectory[:, 6]
+        y_vel = predicted_trajectory[:, 7]
+        x_std = np.sqrt(predicted_covariance[:, 6, 6])
+        y_std = np.sqrt(predicted_covariance[:, 7, 7])
+        
+        ax3.plot(x_vel, y_vel, 'k-', linewidth=3, alpha=0.8, label='GMR Recovery', zorder=10)
+        ax3.fill_between(x_vel, y_vel - y_std, y_vel + y_std, alpha=0.3, color='gray', label='±1σ deviation', zorder=5)
+        ax3.plot(x_vel[0], y_vel[0], 'ko', markersize=8, label='Start', zorder=11)
+        ax3.plot(x_vel[-1], y_vel[-1], 'ks', markersize=8, label='End', zorder=11)
+    
+    # Plot velocity Gaussians
+    # Left ankle velocities (dims 7, 8)
+    for k in range(tpgmm._n_components):
+        mean_vel = means[k, [7, 8]]  # [left_ankle_vel_x, left_ankle_vel_y]
+        cov_vel = covariances[k][np.ix_([7, 8], [7, 8])]  # 2x2 covariance matrix
+        
+        # Plot mean as point
+        ax3.scatter(mean_vel[0], mean_vel[1], c=[colors[k]], s=100*weights[k]*10, 
+                   alpha=0.8, edgecolors='black', linewidth=1, zorder=5)
+        
+        # Plot covariance as ellipse
+        eigenvals, eigenvecs = np.linalg.eigh(cov_vel)
+        angle = np.degrees(np.arctan2(eigenvecs[1, 0], eigenvecs[0, 0]))
+        width, height = 2 * np.sqrt(eigenvals)  # 1-sigma ellipse
+        
+        ellipse = Ellipse(mean_vel, width, height, angle=angle, 
+                         facecolor=colors[k], alpha=0.3, edgecolor=colors[k], linewidth=2, zorder=1)
+        ax3.add_patch(ellipse)
+    
+    ax3.set_title('Left Ankle Velocity Gaussians with Deviations\n(Dimensions 7, 8)', fontsize=14, fontweight='bold')
+    ax3.set_xlabel('Left Ankle X Velocity (m/s)')
+    ax3.set_ylabel('Left Ankle Y Velocity (m/s)')
+    ax3.grid(True, alpha=0.3)
+    ax3.axis('equal')
+    
+    # Plot recovered trajectory with deviations if provided
+    if predicted_trajectory is not None and predicted_covariance is not None:
+        # Right ankle velocities trajectory with uncertainty (dims 2, 3 in predicted_trajectory correspond to dims 3, 4)
+        x_vel = predicted_trajectory[:, 2]
+        y_vel = predicted_trajectory[:, 3]
+        x_std = np.sqrt(predicted_covariance[:, 2, 2])
+        y_std = np.sqrt(predicted_covariance[:, 3, 3])
+        
+        ax4.plot(x_vel, y_vel, 'k-', linewidth=3, alpha=0.8, label='GMR Recovery', zorder=10)
+        ax4.fill_between(x_vel, y_vel - y_std, y_vel + y_std, alpha=0.3, color='gray', label='±1σ deviation', zorder=5)
+        ax4.plot(x_vel[0], y_vel[0], 'ko', markersize=8, label='Start', zorder=11)
+        ax4.plot(x_vel[-1], y_vel[-1], 'ks', markersize=8, label='End', zorder=11)
+    
+    # Right ankle velocities (dims 3, 4)
+    for k in range(tpgmm._n_components):
+        mean_vel = means[k, [3, 4]]  # [right_ankle_vel_x, right_ankle_vel_y]
+        cov_vel = covariances[k][np.ix_([3, 4], [3, 4])]  # 2x2 covariance matrix
+        
+        # Plot mean as point
+        ax4.scatter(mean_vel[0], mean_vel[1], c=[colors[k]], s=100*weights[k]*10, 
+                   alpha=0.8, edgecolors='black', linewidth=1, zorder=5)
+        
+        # Plot covariance as ellipse
+        eigenvals, eigenvecs = np.linalg.eigh(cov_vel)
+        angle = np.degrees(np.arctan2(eigenvecs[1, 0], eigenvecs[0, 0]))
+        width, height = 2 * np.sqrt(eigenvals)  # 1-sigma ellipse
+        
+        ellipse = Ellipse(mean_vel, width, height, angle=angle, 
+                         facecolor=colors[k], alpha=0.3, edgecolor=colors[k], linewidth=2, zorder=1)
+        ax4.add_patch(ellipse)
+    
+    ax4.set_title('Right Ankle Velocity Gaussians with Deviations\n(Dimensions 3, 4)', fontsize=14, fontweight='bold')
+    ax4.set_xlabel('Right Ankle X Velocity (m/s)')
+    ax4.set_ylabel('Right Ankle Y Velocity (m/s)')
+    ax4.grid(True, alpha=0.3)
+    ax4.axis('equal')
+    
+    plt.tight_layout()
+    plt.savefig(f'{save_dir}/gaussian_models_with_deviations.png', dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"Gaussian models with deviations visualization saved to {save_dir}/gaussian_models_with_deviations.png")
+
+
 def plot_gaussian_models(model_data, predicted_trajectory=None, save_dir="plots"):
     """Plot Gaussian models with means and covariance ellipses for position and velocity dimensions."""
     
@@ -188,19 +365,19 @@ def plot_gaussian_models(model_data, predicted_trajectory=None, save_dir="plots"
     
     # Plot recovered trajectory if provided
     if predicted_trajectory is not None:
-        # Right ankle positions trajectory (dims 0, 1 in predicted_trajectory correspond to dims 1, 2)
-        ax1.plot(predicted_trajectory[:, 0], predicted_trajectory[:, 1], 'k-', 
+        # Left ankle positions trajectory (dims 4, 5 in predicted_trajectory correspond to dims 5, 6)
+        ax1.plot(predicted_trajectory[:, 4], predicted_trajectory[:, 5], 'k-', 
                 linewidth=3, alpha=0.7, label='GMR Recovery', zorder=10)
-        ax1.plot(predicted_trajectory[0, 0], predicted_trajectory[0, 1], 'ko', 
+        ax1.plot(predicted_trajectory[0, 4], predicted_trajectory[0, 5], 'ko', 
                 markersize=8, label='Start', zorder=11)
-        ax1.plot(predicted_trajectory[-1, 0], predicted_trajectory[-1, 1], 'ks', 
+        ax1.plot(predicted_trajectory[-1, 4], predicted_trajectory[-1, 5], 'ks', 
                 markersize=8, label='End', zorder=11)
     
     # Plot position Gaussians
-    # Right ankle positions (dims 1, 2)
+    # Left ankle positions (dims 5, 6)
     for k in range(tpgmm._n_components):
-        mean_pos = means[k, [1, 2]]  # [right_ankle_pos_x, right_ankle_pos_y]
-        cov_pos = covariances[k][np.ix_([1, 2], [1, 2])]  # 2x2 covariance matrix
+        mean_pos = means[k, [5, 6]]  # [left_ankle_pos_x, left_ankle_pos_y]
+        cov_pos = covariances[k][np.ix_([5, 6], [5, 6])]  # 2x2 covariance matrix
         
         # Plot mean as point
         ax1.scatter(mean_pos[0], mean_pos[1], c=[colors[k]], s=100*weights[k]*10, 
@@ -215,27 +392,27 @@ def plot_gaussian_models(model_data, predicted_trajectory=None, save_dir="plots"
                          facecolor=colors[k], alpha=0.3, edgecolor=colors[k], linewidth=2, zorder=1)
         ax1.add_patch(ellipse)
     
-    ax1.set_title('Right Ankle Position Gaussians\n(Dimensions 1, 2)', fontsize=14, fontweight='bold')
-    ax1.set_xlabel('Right Ankle X Position (m)')
-    ax1.set_ylabel('Right Ankle Y Position (m)')
+    ax1.set_title('Left Ankle Position Gaussians\n(Dimensions 5, 6)', fontsize=14, fontweight='bold')
+    ax1.set_xlabel('Left Ankle X Position (m)')
+    ax1.set_ylabel('Left Ankle Y Position (m)')
     ax1.grid(True, alpha=0.3)
     ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     ax1.axis('equal')
     
     # Plot recovered trajectory if provided
     if predicted_trajectory is not None:
-        # Left ankle positions trajectory (dims 4, 5 in predicted_trajectory correspond to dims 5, 6)
-        ax2.plot(predicted_trajectory[:, 4], predicted_trajectory[:, 5], 'k-', 
+        # Right ankle positions trajectory (dims 0, 1 in predicted_trajectory correspond to dims 1, 2)
+        ax2.plot(predicted_trajectory[:, 0], predicted_trajectory[:, 1], 'k-', 
                 linewidth=3, alpha=0.7, label='GMR Recovery', zorder=10)
-        ax2.plot(predicted_trajectory[0, 4], predicted_trajectory[0, 5], 'ko', 
+        ax2.plot(predicted_trajectory[0, 0], predicted_trajectory[0, 1], 'ko', 
                 markersize=8, label='Start', zorder=11)
-        ax2.plot(predicted_trajectory[-1, 4], predicted_trajectory[-1, 5], 'ks', 
+        ax2.plot(predicted_trajectory[-1, 0], predicted_trajectory[-1, 1], 'ks', 
                 markersize=8, label='End', zorder=11)
     
-    # Left ankle positions (dims 5, 6)
+    # Right ankle positions (dims 1, 2)
     for k in range(tpgmm._n_components):
-        mean_pos = means[k, [5, 6]]  # [left_ankle_pos_x, left_ankle_pos_y]
-        cov_pos = covariances[k][np.ix_([5, 6], [5, 6])]  # 2x2 covariance matrix
+        mean_pos = means[k, [1, 2]]  # [right_ankle_pos_x, right_ankle_pos_y]
+        cov_pos = covariances[k][np.ix_([1, 2], [1, 2])]  # 2x2 covariance matrix
         
         # Plot mean as point
         ax2.scatter(mean_pos[0], mean_pos[1], c=[colors[k]], s=100*weights[k]*10, 
@@ -250,27 +427,27 @@ def plot_gaussian_models(model_data, predicted_trajectory=None, save_dir="plots"
                          facecolor=colors[k], alpha=0.3, edgecolor=colors[k], linewidth=2, zorder=1)
         ax2.add_patch(ellipse)
     
-    ax2.set_title('Left Ankle Position Gaussians\n(Dimensions 5, 6)', fontsize=14, fontweight='bold')
-    ax2.set_xlabel('Left Ankle X Position (m)')
-    ax2.set_ylabel('Left Ankle Y Position (m)')
+    ax2.set_title('Right Ankle Position Gaussians\n(Dimensions 1, 2)', fontsize=14, fontweight='bold')
+    ax2.set_xlabel('Right Ankle X Position (m)')
+    ax2.set_ylabel('Right Ankle Y Position (m)')
     ax2.grid(True, alpha=0.3)
     ax2.axis('equal')
     
     # Plot recovered trajectory if provided
     if predicted_trajectory is not None:
-        # Right ankle velocities trajectory (dims 2, 3 in predicted_trajectory correspond to dims 3, 4)
-        ax3.plot(predicted_trajectory[:, 2], predicted_trajectory[:, 3], 'k-', 
+        # Left ankle velocities trajectory (dims 6, 7 in predicted_trajectory correspond to dims 7, 8)
+        ax3.plot(predicted_trajectory[:, 6], predicted_trajectory[:, 7], 'k-', 
                 linewidth=3, alpha=0.7, label='GMR Recovery', zorder=10)
-        ax3.plot(predicted_trajectory[0, 2], predicted_trajectory[0, 3], 'ko', 
+        ax3.plot(predicted_trajectory[0, 6], predicted_trajectory[0, 7], 'ko', 
                 markersize=8, label='Start', zorder=11)
-        ax3.plot(predicted_trajectory[-1, 2], predicted_trajectory[-1, 3], 'ks', 
+        ax3.plot(predicted_trajectory[-1, 6], predicted_trajectory[-1, 7], 'ks', 
                 markersize=8, label='End', zorder=11)
     
     # Plot velocity Gaussians
-    # Right ankle velocities (dims 3, 4)
+    # Left ankle velocities (dims 7, 8)
     for k in range(tpgmm._n_components):
-        mean_vel = means[k, [3, 4]]  # [right_ankle_vel_x, right_ankle_vel_y]
-        cov_vel = covariances[k][np.ix_([3, 4], [3, 4])]  # 2x2 covariance matrix
+        mean_vel = means[k, [7, 8]]  # [left_ankle_vel_x, left_ankle_vel_y]
+        cov_vel = covariances[k][np.ix_([7, 8], [7, 8])]  # 2x2 covariance matrix
         
         # Plot mean as point
         ax3.scatter(mean_vel[0], mean_vel[1], c=[colors[k]], s=100*weights[k]*10, 
@@ -285,26 +462,26 @@ def plot_gaussian_models(model_data, predicted_trajectory=None, save_dir="plots"
                          facecolor=colors[k], alpha=0.3, edgecolor=colors[k], linewidth=2, zorder=1)
         ax3.add_patch(ellipse)
     
-    ax3.set_title('Right Ankle Velocity Gaussians\n(Dimensions 3, 4)', fontsize=14, fontweight='bold')
-    ax3.set_xlabel('Right Ankle X Velocity (m/s)')
-    ax3.set_ylabel('Right Ankle Y Velocity (m/s)')
+    ax3.set_title('Left Ankle Velocity Gaussians\n(Dimensions 7, 8)', fontsize=14, fontweight='bold')
+    ax3.set_xlabel('Left Ankle X Velocity (m/s)')
+    ax3.set_ylabel('Left Ankle Y Velocity (m/s)')
     ax3.grid(True, alpha=0.3)
     ax3.axis('equal')
     
     # Plot recovered trajectory if provided
     if predicted_trajectory is not None:
-        # Left ankle velocities trajectory (dims 6, 7 in predicted_trajectory correspond to dims 7, 8)
-        ax4.plot(predicted_trajectory[:, 6], predicted_trajectory[:, 7], 'k-', 
+        # Right ankle velocities trajectory (dims 2, 3 in predicted_trajectory correspond to dims 3, 4)
+        ax4.plot(predicted_trajectory[:, 2], predicted_trajectory[:, 3], 'k-', 
                 linewidth=3, alpha=0.7, label='GMR Recovery', zorder=10)
-        ax4.plot(predicted_trajectory[0, 6], predicted_trajectory[0, 7], 'ko', 
+        ax4.plot(predicted_trajectory[0, 2], predicted_trajectory[0, 3], 'ko', 
                 markersize=8, label='Start', zorder=11)
-        ax4.plot(predicted_trajectory[-1, 6], predicted_trajectory[-1, 7], 'ks', 
+        ax4.plot(predicted_trajectory[-1, 2], predicted_trajectory[-1, 3], 'ks', 
                 markersize=8, label='End', zorder=11)
     
-    # Left ankle velocities (dims 7, 8)
+    # Right ankle velocities (dims 3, 4)
     for k in range(tpgmm._n_components):
-        mean_vel = means[k, [7, 8]]  # [left_ankle_vel_x, left_ankle_vel_y]
-        cov_vel = covariances[k][np.ix_([7, 8], [7, 8])]  # 2x2 covariance matrix
+        mean_vel = means[k, [3, 4]]  # [right_ankle_vel_x, right_ankle_vel_y]
+        cov_vel = covariances[k][np.ix_([3, 4], [3, 4])]  # 2x2 covariance matrix
         
         # Plot mean as point
         ax4.scatter(mean_vel[0], mean_vel[1], c=[colors[k]], s=100*weights[k]*10, 
@@ -319,9 +496,9 @@ def plot_gaussian_models(model_data, predicted_trajectory=None, save_dir="plots"
                          facecolor=colors[k], alpha=0.3, edgecolor=colors[k], linewidth=2, zorder=1)
         ax4.add_patch(ellipse)
     
-    ax4.set_title('Left Ankle Velocity Gaussians\n(Dimensions 7, 8)', fontsize=14, fontweight='bold')
-    ax4.set_xlabel('Left Ankle X Velocity (m/s)')
-    ax4.set_ylabel('Left Ankle Y Velocity (m/s)')
+    ax4.set_title('Right Ankle Velocity Gaussians\n(Dimensions 3, 4)', fontsize=14, fontweight='bold')
+    ax4.set_xlabel('Right Ankle X Velocity (m/s)')
+    ax4.set_ylabel('Right Ankle Y Velocity (m/s)')
     ax4.grid(True, alpha=0.3)
     ax4.axis('equal')
     
@@ -459,12 +636,16 @@ def main():
     print("\nStep 7: Creating Gaussian models visualization...")
     plot_gaussian_models(model_data, predicted_output)
     
-    # Step 8: Plot recovery results
-    print("\nStep 8: Creating recovery results visualizations...")
+    # Step 8: Plot Gaussian models with deviations
+    print("\nStep 8: Creating Gaussian models with deviations visualization...")
+    plot_gaussian_models_with_deviations(model_data, predicted_output, predicted_covariance)
+    
+    # Step 9: Plot recovery results
+    print("\nStep 9: Creating recovery results visualizations...")
     plot_recovery_results(sample_trajectory, predicted_output, pca_results, feature_names)
     
-    # Step 9: Save recovered trajectory
-    print("\nStep 9: Saving recovered trajectory...")
+    # Step 10: Save recovered trajectory
+    print("\nStep 10: Saving recovered trajectory...")
     recovery_data = {
         'original_trajectory': sample_trajectory,
         'predicted_trajectory': predicted_output,
