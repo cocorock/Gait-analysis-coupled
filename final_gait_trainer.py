@@ -15,10 +15,10 @@ import os
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-# Import the TPGMM implementation from TaskParameterizedGaussianMixtureModels
+# Import the TPGMM implementation from TaskPaGMMM
 import sys
-sys.path.append('TaskParameterizedGaussianMixtureModels')
-from tpgmm import TPGMM
+sys.path.append('TaskPaGMMM')
+from tpgmm.tpgmm.tpgmm import TPGMM
 
 
 def load_gait_data(json_path):
@@ -186,7 +186,7 @@ def prepare_tpgmm_data(all_trajectories):
 
 
 def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
-    """Find optimal number of components using BIC and AIC scores with visualization."""
+    """Find optimal number of components using BIC scores with visualization."""
     print("\nFinding optimal number of components...")
     
     # Create plots directory
@@ -194,7 +194,6 @@ def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
     
     n_components_list = []
     bic_scores = []
-    aic_scores = []
     
     best_n_components = None
     lowest_bic_score = float('inf')
@@ -209,24 +208,22 @@ def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
         # Fit the model with the trajectories
         tpgmm.fit(reshaped_trajectories)
         
-        # Calculate the BIC and AIC scores
+        # Calculate the BIC score (AIC not available in this implementation)
         bic_score = tpgmm.bic(reshaped_trajectories)
-        aic_score = tpgmm.aic(reshaped_trajectories)
         
-        print(f'n_components={n_components}: BIC={bic_score:.2f}, AIC={aic_score:.2f}')
+        print(f'n_components={n_components}: BIC={bic_score:.2f}')
         
         # Store results
         n_components_list.append(n_components)
         bic_scores.append(bic_score)
-        aic_scores.append(aic_score)
         
         # Update the best n_components and lowest BIC score if the current BIC is lower
         if bic_score < lowest_bic_score:
             lowest_bic_score = bic_score
             best_n_components = n_components
     
-    # Plot BIC and AIC scores
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    # Plot BIC scores
+    fig, ax1 = plt.subplots(1, 1, figsize=(10, 6))
     
     # BIC plot
     ax1.plot(n_components_list, bic_scores, 'bo-', linewidth=2, markersize=8, label='BIC')
@@ -239,39 +236,20 @@ def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
     ax1.legend(fontsize=12)
     ax1.tick_params(labelsize=11)
     
-    # Find best AIC
-    best_aic_idx = np.argmin(aic_scores)
-    best_aic_components = n_components_list[best_aic_idx]
-    
-    # AIC plot
-    ax2.plot(n_components_list, aic_scores, 'go-', linewidth=2, markersize=8, label='AIC')
-    ax2.axvline(x=best_aic_components, color='red', linestyle='--', linewidth=2, 
-               label=f'Optimal (n={best_aic_components})')
-    ax2.set_xlabel('Number of Components', fontsize=12, fontweight='bold')
-    ax2.set_ylabel('AIC Score', fontsize=12, fontweight='bold')
-    ax2.set_title('Akaike Information Criterion (AIC)', fontsize=14, fontweight='bold')
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(fontsize=12)
-    ax2.tick_params(labelsize=11)
-    
     plt.tight_layout()
     plt.savefig('plots/model_selection_criteria.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     print(f'\n=== Model Selection Results ===')
     print(f'BIC optimal n_components: {best_n_components} (BIC = {lowest_bic_score:.2f})')
-    print(f'AIC optimal n_components: {best_aic_components} (AIC = {min(aic_scores):.2f})')
     print(f'Model selection plot saved to plots/model_selection_criteria.png')
     
     # Return results dictionary
     return {
         'best_n_components': best_n_components,
-        'best_aic_components': best_aic_components,
         'n_components_list': n_components_list,
         'bic_scores': bic_scores,
-        'aic_scores': aic_scores,
-        'lowest_bic_score': lowest_bic_score,
-        'lowest_aic_score': min(aic_scores)
+        'lowest_bic_score': lowest_bic_score
     }
 
 
@@ -304,9 +282,9 @@ def main():
     print("\nStep 3: Preparing TPGMM data...")
     reshaped_trajectories = prepare_tpgmm_data(all_trajectories)
     
-    # Step 4: Find optimal components using BIC and AIC
-    print("\nStep 4: Finding optimal components using BIC and AIC...")
-    model_selection_results = find_optimal_components(reshaped_trajectories, component_range=(8, 19))
+    # Step 4: Find optimal components using BIC
+    print("\nStep 4: Finding optimal components using BIC...")
+    model_selection_results = find_optimal_components(reshaped_trajectories, component_range=(2, 24))
     best_n_components = model_selection_results['best_n_components']
     
     # Step 5: Train final TPGMM with optimal components

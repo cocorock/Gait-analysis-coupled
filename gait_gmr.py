@@ -16,6 +16,7 @@ import sys
 
 # Add TaskPaGMMM to Python path
 sys.path.append('TaskPaGMMM')
+from tpgmm.gmr.gmr import GaussianMixtureRegression
 
 
 def load_trained_model(model_path):
@@ -46,71 +47,37 @@ def extract_sample_trajectory(model_data, frame_idx=0, trajectory_idx=0):
     return sample_trajectory
 
 
-def predict_using_tpgmm_gaussian_weights(tpgmm, time_input, feature_idx_to_predict):
+def predict_using_tpgmm_gmr(tpgmm, time_input, feature_idx_to_predict):
     """
-    Simplified prediction using TPGMM Gaussian weights.
-    This follows the approach from the notebook more directly.
+    Prediction using TaskPaGMMM GaussianMixtureRegression with 3 frames.
+    Adapted from TaskPaGMMM example but for 3 frames instead of 2.
     """
     
-    # For simplicity, we'll use the first frame (FR1) 
-    frame_idx = 0
+    # Create GMR instance with time as input (index 0)
+    gmr = GaussianMixtureRegression.from_tpgmm(tpgmm, input_idx=[0])
     
-    # Get the means and covariances for the selected frame
-    means = tpgmm.means_[frame_idx]  # Shape: (n_components, n_features)
-    covariances = tpgmm.covariances_[frame_idx]  # Shape: (n_components, n_features, n_features)
-    weights = tpgmm.weights_  # Shape: (n_components,)
+    # For 3 frames, we need to define translation and rotation for each frame
+    # Using identity transformations as we're working in the original coordinate system
+    num_output_features = len(feature_idx_to_predict)
     
-    n_points = len(time_input)
-    n_output_features = len(feature_idx_to_predict)
+    # Create translation matrices for 3 frames (3, num_output_features)
+    # Use zeros as we're not translating the coordinate system
+    translation = np.zeros((3, num_output_features))
     
-    predicted_output = np.zeros((n_points, n_output_features))
-    predicted_covariance = np.zeros((n_points, n_output_features, n_output_features))
+    # Create rotation matrices for 3 frames (3, num_output_features, num_output_features)
+    # Use identity matrices as we're not rotating the coordinate system
+    rotation_matrix = np.eye(num_output_features)[None].repeat(3, axis=0)
     
-    # Time index (input)
-    time_idx = 0
+    print(f"GMR setup: {translation.shape} translation, {rotation_matrix.shape} rotation")
     
-    for i, t in enumerate(time_input):
-        # Calculate responsibilities (h) for each component at this time point
-        responsibilities = np.zeros(tpgmm._n_components)
-        
-        for k in range(tpgmm._n_components):
-            # Simple Gaussian evaluation at time t
-            mean_time = means[k, time_idx]
-            var_time = covariances[k, time_idx, time_idx]
-            
-            # Gaussian probability at time t
-            prob = np.exp(-0.5 * ((t - mean_time) ** 2) / var_time) / np.sqrt(2 * np.pi * var_time)
-            responsibilities[k] = weights[k] * prob
-        
-        # Normalize responsibilities
-        responsibilities /= (np.sum(responsibilities) + 1e-10)
-        
-        # Predict output features using Gaussian Mixture Regression
-        pred_mean = np.zeros(n_output_features)
-        pred_cov = np.zeros((n_output_features, n_output_features))
-        
-        for k in range(tpgmm._n_components):
-            # Extract means and covariances for input and output
-            mu_i = means[k, time_idx]  # input mean
-            mu_o = means[k, feature_idx_to_predict]  # output mean
-            
-            sigma_ii = covariances[k, time_idx, time_idx]  # input-input covariance
-            sigma_io = covariances[k, time_idx, feature_idx_to_predict]  # input-output covariance  
-            sigma_oo = covariances[k][np.ix_(feature_idx_to_predict, feature_idx_to_predict)]  # output-output covariance
-            
-            # GMR prediction for component k
-            pred_mean_k = mu_o + (sigma_io.T / sigma_ii) * (t - mu_i)
-            pred_cov_k = sigma_oo - np.outer(sigma_io, sigma_io) / sigma_ii
-            
-            # Weight by responsibility
-            pred_mean += responsibilities[k] * pred_mean_k
-            pred_cov += responsibilities[k] * (pred_cov_k + np.outer(pred_mean_k, pred_mean_k))
-        
-        # Correct covariance calculation
-        pred_cov -= np.outer(pred_mean, pred_mean)
-        
-        predicted_output[i] = pred_mean
-        predicted_covariance[i] = pred_cov
+    # Fit the GMR with the 3-frame transformations
+    gmr.fit(translation=translation, rotation_matrix=rotation_matrix)
+    
+    # Prepare input data for prediction (time points)
+    time_input_reshaped = time_input.reshape(-1, 1)
+    
+    # Predict using GMR
+    predicted_output, predicted_covariance = gmr.predict(time_input_reshaped)
     
     return predicted_output, predicted_covariance
 
@@ -333,10 +300,10 @@ def plot_gaussian_models_with_deviations(model_data, predicted_trajectory=None, 
     ax4.axis('equal')
     
     plt.tight_layout()
-    plt.savefig(f'{save_dir}/simplified_gaussian_models_with_deviations.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}/tpgmm_gaussian_models_with_deviations.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"Gaussian models with deviations visualization saved to {save_dir}/simplified_gaussian_models_with_deviations.png")
+    print(f"Gaussian models with deviations visualization saved to {save_dir}/tpgmm_gaussian_models_with_deviations.png")
 
 
 def plot_gaussian_models(model_data, predicted_trajectory=None, save_dir="plots"):
@@ -503,10 +470,10 @@ def plot_gaussian_models(model_data, predicted_trajectory=None, save_dir="plots"
     ax4.axis('equal')
     
     plt.tight_layout()
-    plt.savefig(f'{save_dir}/simplified_gaussian_models_visualization.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}/tpgmm_gaussian_models_visualization.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"Gaussian models visualization saved to {save_dir}/simplified_gaussian_models_visualization.png")
+    print(f"Gaussian models visualization saved to {save_dir}/tpgmm_gaussian_models_visualization.png")
 
 
 def plot_recovery_results(original_trajectory, predicted_trajectory, pca_results, feature_names, save_dir="plots"):
@@ -584,7 +551,7 @@ def plot_recovery_results(original_trajectory, predicted_trajectory, pca_results
         axes[1, 3].axis('equal')
     
     plt.tight_layout()
-    plt.savefig(f'{save_dir}/simplified_gmr_recovery_results.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}/tpgmm_gmr_recovery_results.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     print(f"Recovery results plots saved to {save_dir}/ directory")
@@ -619,9 +586,9 @@ def main():
     print(f"Output feature indices: {output_feature_indices}")
     print(f"Output features: {[feature_names[i] for i in output_feature_indices]}")
     
-    # Step 5: Perform simplified GMR prediction
-    print("\nStep 5: Performing simplified GMR prediction...")
-    predicted_output, predicted_covariance = predict_using_tpgmm_gaussian_weights(
+    # Step 5: Perform GMR prediction using TaskPaGMMM
+    print("\nStep 5: Performing GMR prediction using TaskPaGMMM...")
+    predicted_output, predicted_covariance = predict_using_tpgmm_gmr(
         tpgmm, time_input, output_feature_indices
     )
     
