@@ -258,6 +258,8 @@ def main():
     print("=== Final Gait Analysis TPGMM Training ===")
     
     # Configuration
+    reg_factor = 1e-3
+    threshold = 1e-6
     json_path = "/home/jemajuinta/ws/Gait-analysis-coupled/alpha/Gait Data/4D/gait_analysis_export_subject35.json"
     
     # Create pkls directory if it doesn't exist
@@ -284,12 +286,12 @@ def main():
     
     # Step 4: Find optimal components using BIC
     print("\nStep 4: Finding optimal components using BIC...")
-    model_selection_results = find_optimal_components(reshaped_trajectories, component_range=(2, 24))
+    model_selection_results = find_optimal_components(reshaped_trajectories, component_range=(3, 16))
     best_n_components = model_selection_results['best_n_components']
     
     # Step 5: Train final TPGMM with optimal components
     print(f"\nStep 5: Training final TPGMM with n_components={best_n_components}...")
-    tpgmm = TPGMM(n_components=best_n_components, verbose=True, reg_factor=1e-8, threshold=1e-5)
+    tpgmm = TPGMM(n_components=best_n_components, verbose=True, reg_factor=reg_factor, threshold=threshold)
     tpgmm.fit(reshaped_trajectories)
     
     print("TPGMM training completed!")
