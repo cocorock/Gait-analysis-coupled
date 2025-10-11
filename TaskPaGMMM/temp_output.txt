@@ -1,0 +1,60 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "<string>", line 1, in <listcomp>
+  File "C:\Users\quepe\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 82: character maps to <undefined>
+Cell 1: import sys
+
+import os
+
+
+
+import json
+
+import numpy as np
+
+import matplotlib.pyplot as plt
+Cell 2: parent_dir = os.path.dirname(os.getcwd())
+
+sys.path.append(parent_dir)
+
+
+
+print(parent_dir)
+
+print(os.getcwd())
+Cell 3: from tpgmm.tpgmm.tpgmm import TPGMM
+
+from tpgmm.gmr.gmr import GaussianMixtureRegression
+
+from tpgmm.utils.plot.plot import plot_trajectories, plot_ellipsoids, scatter
+
+from tpgmm.utils.plot.plot import plot_trajectories_2d, plot_ellipsoids_2d
+Cell 4: with open("7days1/gait_analysis_export_subject35v3.json", "r") as f:
+
+    data = json.load(f)
+Cell 6: # Create separate lists for trajectories from each frame of reference
+
+trajectories_fr1 = []
+
+trajectories_fr2 = []
+
+
+
+# Access kinematics data for FR1 and FR2
+
+fr1_data = data['kinematics_data']['FR1']['right_leg_kinematics']
+
+fr2_data = data['kinematics_data']['FR2']['right_leg_kinematics']
+
+
+
+for demo_fr1, demo_fr2 in zip(fr1_data, fr2_data):
+
+    # For FR1: right ankle position, velocity, and angle data with time
+
+    pos_fr1 = np.array(demo_fr1['right_ankle_pos']).T  # Shape: (200, 2)
+
+    

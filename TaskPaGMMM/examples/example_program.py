@@ -338,7 +338,7 @@ def main():
         alpha=0.3
     )
     
-    plt.show()
+    # plt.show()
     
     # Print distance metrics
     start_distance = np.linalg.norm(translation[0] - mu[0])
