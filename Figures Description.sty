@@ -1,0 +1,456 @@
+
+
+
+
+figure 1, show the felxion/extesion angle trajectories extracted from 1 motino capture file from the CMU Graphics Lab Motion Capture Database has a top plot which titled: Hip flexion, in dergrees (right in red and left in blue), with vertical red dashed lines which indicate the points where the gait cycle should be segmented based on the right knee local minima angle angle.   
+In blue dashed line, the points where the gait cycle shoyld be segmeted should be segmeted based on the ased on the right knee local minima angle angle. Im my thesis I used just the right knee criterion. The bottom plot tittled Knee Flexion: Detected (Hollow) vs Validated (filled), show the knee flexion trajectories, of the right knee (red) amd left knee (blue). With dot located at the local minima positions (all are filled for this Motion capture of 3.19 seg)
+
+
+
+
+Figure 1 Description: Gait Cycle Detection and Validation Analysis
+
+  The figure, titled "Hip Minima Detection", provides a comprehensive visualization of the
+  automated gait cycle segmentation process. It is composed of two vertically-aligned subplots, each
+  detailing a different aspect of the algorithm's performance, from raw signal processing to final
+  quantitative results.
+
+  Subplot 1: Hip Flexion with Validated Cycle Boundaries
+
+   * Content: This plot displays the hip flexion/extension angle trajectories for the right leg (solid red line)
+      and the left leg (solid blue line) as a function of time (in seconds). The y-axis represents the flexion
+     angle in degrees, where positive values typically indicate flexion and negative values indicate extension.
+   * Markers: The key information is conveyed through vertical dashed lines that mark the exact time instances
+     of validated heel strikes, which define the boundaries of the gait cycles.
+       * Red Dashed Lines: Indicate the start and end points of gait cycles identified using the right leg as
+         the reference limb. Each line is annotated with a label (e.g., 'R1', 'R2') to denote the sequence of
+         the validated event.
+       * Blue Dashed Lines: Similarly, these indicate the boundaries of gait cycles identified using the left
+         leg as the reference. They are annotated with labels such as 'L1', 'L2'.
+   * Engineering Interpretation: This subplot allows for a qualitative assessment of the segmentation algorithm.
+      It visualizes the final output of the validation logic, showing where the algorithm has partitioned the
+     continuous hip motion data into discrete, valid gait cycles. It is used to confirm that each segmented
+     cycle correctly captures one full period of hip flexion and extension, which is a fundamental
+     characteristic of a valid gait cycle.
+
+  Subplot 2: Knee Flexion with Detected vs. Validated Events
+
+   * Content: This plot shows the knee flexion/extension angle trajectories for the right (solid red line) and
+     left (solid blue line) legs over time. The y-axis represents the knee flexion angle in degrees.
+   * Markers: This subplot is crucial for understanding the filtering and validation process. It uses two types
+     of markers overlaid on the knee angle signals:
+       * Hollow Circles (Detected): These markers (red for the right knee, blue for the left) indicate all
+         initially detected local minima in the knee flexion signal. These points are considered potential heel
+         strikes before the robust validation logic is applied.
+       * Filled Circles (Validated): These markers (solid red for the right knee, solid blue for the left)
+         represent the subset of knee minima that successfully passed the validation criteria (i.e., the cycle
+         duration falls within a physiologically plausible range, and the corresponding hip motion exhibits a
+         single, clear minimum).
+   * Engineering Interpretation: This plot provides a direct visual comparison between the initial set of
+     candidate events and the final, reliable set. It effectively illustrates the selectivity of the algorithm,
+     highlighting which potential heel strikes were discarded due to invalid cycle timing or ambiguous hip
+     movement. The title, "Detected (hollow) vs Validated (filled)," explicitly summarizes its purpose.
+
+    
+Figure 2 Description: Normalized Gait Kinematics for Right Leg Cycles
+
+  The figure, titled "Right Leg Cycles - Joint Positions (Raw vs Filtered)", is a composite plot designed to
+  analyze the kinematics of multiple gait cycles that have been segmented based on the right leg's heel
+  strikes. It provides a detailed comparison between the original (raw) and processed (filtered) joint angle
+  data, normalized in time.
+
+  The figure consists of a 2x2 grid of subplots. Each subplot is dedicated to the angular position of a
+  specific joint:
+
+   * Top-Left: Right Hip Flexion/Extension
+   * Top-Right: Left Hip Flexion/Extension
+   * Bottom-Left: Right Knee Flexion/Extension
+   * Bottom-Right: Left Knee Flexion/Extension
+
+  Content of Each Subplot
+
+  Each of the four subplots contains the same set of features, displaying the data for its respective joint:
+
+   1. Overlay of Multiple Gait Cycles: All valid gait cycles identified for the right leg are plotted on top of
+      each other to allow for an assessment of inter-cycle variability. Each individual cycle is assigned a
+      unique color from a perceptually distinct colormap (HSV).
+
+   2. Raw vs. Filtered Data: For every cycle, two distinct lines are plotted:
+       * Filtered Data (Solid Colored Line): This line represents the primary data of interest—the joint angle
+         trajectory after it has been processed by a smoothing filter (e.g., a Butterworth filter). Its solid
+         line style and distinct color make it the most prominent feature.
+       * Raw Data (Dashed Gray Line): This line represents the original, unprocessed joint angle data for the
+         same cycle. It serves as a baseline to visually quantify the effect of the filtering process, showing
+         how much noise or jitter was removed.
+
+   3. Normalized and Duplicated Time Axis: The x-axis is labeled "Normalized Time (2 consecutive cycles)" and
+      spans from 0 to 2. This is a critical feature for analyzing cyclical data:
+       * Normalization: Each gait cycle, regardless of its absolute duration in seconds, is normalized to a
+         uniform time base, where 0 represents the start of the cycle (heel strike) and 1 represents the end of
+         the cycle (the subsequent heel strike of the same foot).
+       * Duplication: The normalized cycle (from 0 to 1) is concatenated with a copy of itself, extending the
+         plot to a value of 2 on the x-axis. This is a standard engineering technique used to visually inspect
+         the periodicity and continuity of the signal. A vertical dashed line at x=1 explicitly marks the
+         boundary between the end of the cycle and the beginning of its repetition.
+       * Shaded Regions: To further clarify the duplication, the background of the first cycle (0 to 1) is
+         lightly shaded in red, and the background of the second, repeated cycle (1 to 2) is lightly shaded in
+         blue.
+
+  Engineering Interpretation
+
+  This visualization is a powerful diagnostic tool for several reasons:
+
+   * Filter Performance Assessment: By comparing the dashed gray line (raw) to the solid colored line
+     (filtered), an engineer can immediately assess the efficacy of the filtering algorithm. It shows how well
+     the filter removes high-frequency noise without distorting the underlying kinematic profile of the gait
+     cycle.
+   * Inter-Cycle Variability: The spread between the different colored lines (each representing a different
+     cycle) provides a clear visual measure of the consistency of the subject's gait. Tightly clustered lines
+     indicate a highly repeatable and stable walking pattern, whereas significant divergence indicates high
+     variability.
+   * Continuity Check: The duplicated cycle on the x-axis allows for a crucial quality check. A smooth, seamless
+      transition across the vertical dashed line at x=1 confirms that the start- and end-points of the
+     normalized cycle are equivalent, which is a prerequisite for many forms of further analysis, such as
+     Fourier analysis or dynamic time warping. Any discontinuity or "jump" at this point would indicate a
+     problem with the data normalization or segmentation.
+   * Cross-Joint Coordination: By examining all four subplots together, one can qualitatively analyze the
+     coordination and phasing between the hip and knee joints of both legs throughout the right leg's gait
+     cycle.
+
+     
+Figure 3 Description: Statistical Analysis of Right Leg Gait Kinematics
+
+  The figure, titled "Right Leg - Filtered Mean (+/- 2 Std) and All Trajectories", presents a statistical summary of the angular kinematics for gait cycles segmented by the right leg. Its
+  primary purpose is to characterize the average movement pattern and its variability across all recorded cycles.
+
+  The figure is organized as a 2x2 grid of subplots, with each subplot dedicated to a specific joint's motion:
+
+   * Top-Left: Right Hip Flexion/Extension
+   * Top-Right: Left Hip Flexion/Extension
+   * Bottom-Left: Right Knee Flexion/Extension
+   * Bottom-Right: Left Knee Flexion/Extension
+
+  Content of Each Subplot
+
+  Each subplot visualizes an ensemble of data, combining individual trajectories with their statistical aggregation:
+
+   1. Mean Filtered Trajectory (Solid Blue Line): The most prominent feature in each plot is a thick, solid blue line. This line represents the statistical mean of all the filtered joint
+      angle trajectories. It illustrates the average, or characteristic, movement pattern for that joint across all the analyzed gait cycles.
+
+   2. Standard Deviation Band (Shaded Blue Area): Surrounding the mean trajectory is a semi-transparent shaded blue region. This band represents the mean plus and minus two standard
+      deviations (±2 SD). In engineering and statistical terms, this band is a measure of the dispersion or variability of the movement. A narrow band indicates a highly consistent and
+      repeatable movement pattern across cycles, while a wide band signifies high variability in the joint's motion at that specific phase of the gait cycle. Assuming a normal distribution,
+      this band contains approximately 95% of all trajectories.
+
+   3. Individual Trajectories ("Spaghetti Plot"): Faintly in the background, two sets of lines are plotted to provide context for the statistical summary:
+       * Filtered Trajectories (Thin, Transparent Blue Lines): All individual filtered cycles are plotted. This creates a "spaghetti plot" that shows the full distribution of the processed
+         data contributing to the mean and standard deviation calculations.
+       * Raw Trajectories (Dashed, Transparent Gray Lines): The original, unprocessed data for all cycles are also shown to provide a complete picture of the underlying data before any
+         processing.
+
+   4. Normalized and Duplicated Time Axis: As with the previous function, the x-axis is normalized from 0 to 1 (representing 0% to 100% of the gait cycle) and then duplicated to span from 0
+      to 2. This allows for visual inspection of the continuity of the mean trajectory at the cycle boundary (marked by a vertical dashed line at x=1), ensuring the average pattern is
+      periodic.
+
+  Engineering Interpretation
+
+  This type of plot is fundamental for quantitative gait analysis and offers deeper insights than plotting individual cycles alone:
+
+   * Characterization of Normative Pattern: The mean trajectory serves as a "kinematic signature" for the subject's gait, representing their average performance. This is essential for
+     establishing a baseline or for comparing against other conditions, subjects, or a normative database.
+   * Quantification of Movement Variability: The standard deviation band is the key feature for analyzing gait stability and consistency. An engineer can pinpoint specific phases of the gait
+      cycle where movement is less consistent (e.g., a wider band during the swing phase might indicate difficulty with motor control). This is a quantifiable measure of movement quality.
+   * Outlier Identification: By visualizing all individual trajectories in the background, it becomes possible to spot any cycles that are significant outliers from the mean pattern, which
+     may warrant further investigation.
+   * Statistical Inference: This representation is the foundation for applying statistical methods to compare different gait conditions (e.g., using statistical parametric mapping (SPM) to
+     see where in the cycle two conditions are significantly different).
+
+
+Figure 4 Description: Comparative Statistical Analysis of Ankle Orientation
+
+  The figure, titled "Mean Ankle Orientation Trajectories (+/- 2 Std Dev)", provides a direct statistical comparison
+  between the rotational movement of the right and left ankles. All data is time-normalized and presented within the
+  framework of the right leg's gait cycle (i.e., from one right-heel-strike to the next).
+
+  Unlike the previous multi-subplot figures, this visualization consists of a single plot where the data for both ankles
+   are overlaid. This is done to facilitate direct comparison of their timing (phasing) and movement patterns.
+
+  Content of the Plot
+
+  The plot contains two main colored components, one for each ankle, both sharing the same axes:
+
+   1. Right Ankle Data (Red):
+       * Mean Trajectory (Solid Red Line): A thick, solid red line represents the average orientation of the right ankle
+         across all analyzed gait cycles.
+       * Variability Band (Shaded Red Area): A semi-transparent red area surrounds the mean line, illustrating the range
+         of the mean plus and minus two standard deviations (±2 SD). This band quantifies the consistency of the right
+         ankle's orientation at each point in the gait cycle.
+       * Individual Cycles (Faint Red Lines): In the background, a "spaghetti plot" of all individual right ankle
+         trajectories is shown, providing context for the statistical summary.
+
+   2. Left Ankle Data (Blue):
+       * Mean Trajectory (Solid Blue Line): A thick, solid blue line shows the average orientation of the left ankle
+         during the right leg's gait cycle.
+       * Variability Band (Shaded Blue Area): A semi-transparent blue area shows the ±2 standard deviation band for the
+         left ankle's movement, indicating its variability.
+       * Individual Cycles (Faint Blue Lines): The corresponding individual trajectories for the left ankle are plotted
+         faintly in the background.
+
+  Axes and Legend
+
+   * X-Axis ("Normalized Time"): The horizontal axis represents one complete, normalized gait cycle, from 0 (representing
+     0% or the moment of right heel strike) to 1 (representing 100% or the moment of the next right heel strike). Note
+     that, unlike the previous plots, this time axis is not duplicated; it shows only a single cycle.
+   * Y-Axis ("Ankle Orientation (deg)"): The vertical axis represents the orientation of the ankle in degrees. This is
+     typically the angle in the sagittal plane, corresponding to dorsiflexion and plantarflexion.
+   * Legend: The legend clearly distinguishes between the "Mean Right Ankle" and "Mean Left Ankle".
+
+  Engineering Interpretation
+
+  This plot is specifically designed for analyzing inter-limb coordination and symmetry.
+
+   * Phase Relationship: By overlaying the two mean trajectories, an engineer can instantly visualize the phase
+     relationship between the ankles. In a typical, symmetric gait, the left ankle's pattern should be qualitatively
+     similar to the right's but shifted in time by approximately 0.5 (i.e., 50% of the gait cycle). Deviations from this
+     50% phase shift can indicate gait asymmetry.
+   * Symmetry Analysis: The plot allows for a direct comparison of the shape and amplitude of the two mean curves. The
+     degree to which the left ankle's curve is a mirror image of the right's (when phase-shifted) is a measure of gait
+     symmetry.
+   * Variability Comparison: Comparing the width of the red and blue standard deviation bands allows for an analysis of
+     movement consistency between the two limbs. For instance, a wider band for the left ankle might suggest that the
+     contralateral limb has less stable control of orientation compared to the reference (right) limb.
+
+
+
+Figure 5 Description: Mean Ankle Spatial Trajectories with Orientation Vectors
+
+  This figure provides a visualization of the ankle's movement through space, combining its average path with its
+  average orientation. It consists of two subplots arranged side-by-side, allowing for a direct comparison between the
+  right and left limbs.
+
+   * Left Subplot: Titled "Right Ankle Mean Trajectory".
+   * Right Subplot: Titled "Left Ankle Mean Trajectory".
+
+  Both subplots display data within the context of the right leg's gait cycle.
+
+  Content of Each Subplot
+
+  Each subplot is a spatial plot in the sagittal plane, where the horizontal axis is the X Position (m)
+  (anterior-posterior direction) and the vertical axis is the Y Position (m) (superior-inferior direction). The content
+  is layered to provide a comprehensive statistical and kinematic picture:
+
+   1. Mean Spatial Trajectory (Solid Red/Blue Line): The most prominent feature is a thick solid line (red for the right
+      ankle, blue for the left). This line does not represent a value over time, but rather the average physical path the
+      ankle travels in space during one complete gait cycle. It typically forms a characteristic teardrop or elliptical
+      loop.
+
+   2. Vertical Variability Band (Shaded Area): A semi-transparent shaded area accompanies the mean trajectory. This band
+      represents the mean Y-position plus and minus two standard deviations of the vertical (Y) position only. It visually
+      quantifies the consistency of the ankle's height during the gait cycle. A narrow band indicates very consistent foot
+      clearance and placement in the vertical direction, while a wider band indicates more variability.
+
+   3. Orientation Vectors (Black Arrows/Quivers): This is the most distinctive feature of the plot. At regular intervals
+      along the mean spatial trajectory, small black arrows are drawn. Each arrow represents the average orientation of the
+       ankle/foot segment at that specific point in space. The direction of the arrow shows the angle of the foot relative
+      to the global coordinate system.
+
+   4. Individual Trajectories (Faint "Spaghetti Plot"): In the background, the individual spatial paths for all analyzed
+      cycles are plotted as thin, semi-transparent lines. This shows the full distribution of the data and gives context to
+       the calculated mean trajectory and its variability.
+
+  Axes and Aspect Ratio
+
+  The plot's axes represent real-world distances in meters. The aspect ratio is deliberately adjusted to be wide and
+  short, which helps to emphasize the characteristic loop shape of the ankle trajectory and make the changes in vertical
+   position and orientation clear.
+
+  Engineering Interpretation
+
+  This figure offers a highly intuitive and information-rich view of gait mechanics, allowing for the analysis of
+  several key events:
+
+   * Toe-Off / Push-Off: The orientation of the quiver vectors at the beginning of the trajectory (the posterior part of
+     the loop) shows the angle of the foot during push-off, indicating the effectiveness of plantarflexion.
+   * Swing Phase & Foot Clearance: The lowest point of the trajectory loop represents the point of minimum foot clearance.
+      The path and the orientation vectors in this region are critical for analyzing the risk of tripping. The vectors
+     show whether the subject maintains dorsiflexion (toes up) to ensure clearance.
+   * Heel Strike / Landing: The orientation of the vectors at the end of the trajectory (the anterior part of the loop)
+     illustrates the foot's posture at initial contact with the ground. It can distinguish between a heel-first, mid-foot,
+      or toe-first landing pattern.
+   * Spatial Symmetry: By comparing the left and right subplots, an engineer can assess the spatial symmetry of the gait
+     pattern. This includes comparing the shape, size, and height of the trajectory loops, as well as the orientation
+     patterns of the feet during their respective swing phases.
+
+
+Figure 6 Description: Mean Ankle Spatial Trajectories
+
+  The figure, titled "Right Leg - Mean Ankle Positions (X vs Y, +/- 2 Std Dev)", visualizes the average physical path of
+   the right and left ankles in the sagittal plane. The entire analysis is performed within the context of the gait
+  cycles segmented by the right leg. The figure consists of two subplots arranged side-by-side for easy comparison.
+
+   * Left Subplot: Titled "Mean Right Ankle Trajectory".
+   * Right Subplot: Titled "Mean Left Ankle Trajectory (Right Leg Cycles)".
+
+  Content of Each Subplot
+
+  Each subplot is a 2D spatial plot where the horizontal axis represents the X Position (m) (anterior-posterior) and the
+   vertical axis represents the Y Position (m) (vertical).
+
+   1. Mean Spatial Trajectory (Solid Red/Blue Line): The primary element is a thick, solid line (red for the right ankle,
+      blue for the left). This line represents the average spatial path that the ankle travels during one complete gait
+      cycle, averaged over all 11 selected cycles. It forms a loop that is characteristic of the limb's movement during
+      swing and stance.
+
+   2. Vertical Variability Band (Shaded Area): A semi-transparent shaded region is drawn around the mean trajectory. This
+      band illustrates the mean Y-position plus and minus two standard deviations of the vertical (Y) position only. This
+      is a statistical measure that quantifies the cycle-to-cycle consistency of the ankle's height. A narrow band
+      indicates consistent foot clearance, while a wider band suggests more variability in the vertical plane.
+
+   3. Individual Trajectories (Faint "Spaghetti Plot"): The background of the plot contains thin, semi-transparent lines
+      showing the individual spatial paths from all 11 gait cycles. This provides a complete view of the underlying data
+      distribution that was used to calculate the mean and standard deviation.
+
+  Axes and Aspect Ratio
+
+  The axes represent real-world distance in meters. The plot's aspect ratio is set to be equal (pbaspect([range(xlim)
+  range(ylim) 1])), meaning that the scaling is the same for both the X and Y axes. This is crucial as it ensures the
+  geometric shape of the ankle's path is not distorted, allowing for accurate interpretation of stride length, foot
+  clearance, and the overall trajectory shape.
+
+  Engineering Interpretation
+
+  This figure is fundamental for analyzing the kinematic characteristics of the ankle's position in space.
+
+   * Gait Pattern Geometry: The shape and size of the mean trajectory loop provide key information. The horizontal extent
+     of the loop relates to the contribution of that limb to the overall stride length, while the vertical extent relates
+     to how high the foot is lifted during the swing phase.
+   * Foot Clearance: The lowest point of the loop during the swing phase is a critical parameter, representing the minimum
+      foot clearance from the ground. The mean value and the width of the variability band at this point give a
+     statistical picture of the risk of tripping.
+   * Movement Consistency: The shaded variability band provides a clear visual guide to the consistency of the ankle's
+     vertical placement. An engineer can quickly identify phases of the gait cycle where the vertical movement is more or
+     less repeatable.
+   * Spatial Symmetry: Comparing the left and right subplots allows for a direct assessment of gait symmetry. An engineer
+     can compare the size, shape, and height of the trajectory loops for the right and left limbs to identify any spatial
+     asymmetries in the walking pattern.
+
+
+
+Figure 7 Description: Ankle Velocity Hodographs for the Right Leg Gait Cycle
+
+  The figure, titled "Right Leg - Mean Ankle Velocities (X vs Y, +/- 2 Std Dev)", presents a dynamic analysis of the
+  ankle's movement by plotting its velocity components against each other. This type of plot is known as a hodograph.
+  The figure consists of two subplots side-by-side, showing the velocity characteristics of both ankles during the gait
+  cycles defined by the right leg.
+
+   * Left Subplot: Titled "Mean Right Ankle Velocity Trajectory".
+   * Right Subplot: Titled "Mean Left Ankle Velocity Trajectory (Right Leg Cycles)".
+
+  Content of Each Subplot
+
+  Each subplot is a hodograph where the horizontal axis is the X Velocity (m/s) (anterior-posterior velocity) and the
+  vertical axis is the Y Velocity (m/s) (vertical velocity). The origin (0,0) represents a state of zero velocity in the
+   sagittal plane.
+
+   1. Mean Velocity Trajectory (Solid Red/Blue Line): The main feature is a thick, solid closed-loop curve (red for the
+      right ankle, blue for the left). This loop represents the average path that the tip of the ankle's velocity vector
+      traces over one complete gait cycle. The shape, size, and position of this loop are characteristic of the dynamics of
+       the limb's movement.
+
+   2. Vertical Velocity Variability Band (Shaded Area): A semi-transparent shaded area is plotted around the mean velocity
+      loop. This band represents the mean Y-velocity plus and minus two standard deviations of the vertical (Y) velocity
+      component only. It quantifies the cycle-to-cycle consistency of the vertical velocity.
+
+   3. Individual Velocity Trajectories (Faint "Spaghetti Plot"): In the background, the hodographs for all 11 individual
+      gait cycles are plotted as thin, semi-transparent lines. This provides context by showing the full distribution of
+      the velocity data that was averaged to create the mean loop.
+
+  Axes and Aspect Ratio
+
+  The axes represent the instantaneous velocity of the ankle in the X and Y directions. A key feature of this plot is
+  that the aspect ratio is set to be equal (pbaspect([range(xlim) range(ylim) 1])). This is critical for a correct
+  physical interpretation, as it ensures that the geometric shape of the velocity loop is not distorted and the true
+  direction of the velocity vector at any point is accurately represented.
+
+  Engineering Interpretation
+
+  A hodograph provides a powerful, intuitive representation of the dynamics of the system:
+
+   * Peak Velocity: The point on the loop furthest from the origin (0,0) corresponds to the moment of maximum ankle speed,
+      which typically occurs during the mid-swing phase of gait.
+   * Dynamic Phases: The trajectory of the loop reveals the sequence of dynamic events. For example, the portion of the
+     loop with large positive X-velocity and changing Y-velocity corresponds to the swing phase. The portion near the
+     origin corresponds to the stance phase, where the ankle is relatively stationary.
+   * Acceleration: The rate of change of position along the hodograph loop represents the ankle's acceleration. Sharp
+     curves in the loop indicate periods of high acceleration (i.e., rapid changes in the velocity vector), such as at the
+      initiation and termination of the swing phase.
+   * Dynamic Symmetry: By comparing the left and right subplots, an engineer can analyze the dynamic symmetry between the
+     limbs. This includes comparing the shape and size of the velocity loops (e.g., to see if peak swing velocity is
+     similar for both legs) and their position relative to the origin.
+
+
+Figure 8 Description: Ankle Spatial Trajectories in Multiple Frames of Reference
+
+  The figure, named "Multi-Frame Ankle Trajectories", is designed to analyze and compare the motion of the ankles not
+  just in absolute space, but also relative to each other. It visualizes how the trajectory of each ankle changes when
+  the coordinate system's origin is conceptually "attached" to different points.
+
+  The figure consists of two main subplots arranged side-by-side:
+
+   * Left Subplot: Titled "Right Ankle Trajectories (Mean +/- 2 Std Dev)".
+   * Right Subplot: Titled "Left Ankle Trajectories (Mean +/- 2 Std Dev)".
+
+  Content of Each Subplot
+
+  Each subplot is a 2D spatial plot (X vs. Y Position in meters) that overlays the statistical results from three
+  different frames of reference (FR). Each frame is represented by a unique color, and for each color, the plot includes
+   the mean trajectory, a shaded band for vertical standard deviation, and the faint "spaghetti plot" of the 11
+  individual cycles.
+
+  The legend provides the key to understanding the three overlaid analyses:
+
+   1. FR1: Absolute (Blue)
+       * Description: This is the standard trajectory relative to the fixed, global coordinate system (i.e., the ground).
+       * Visualization: It shows the familiar loop-shaped path of the ankle as the body moves forward. This serves as the
+         baseline for comparison.
+
+   2. FR2: Right-Ankle Anchored (Red)
+       * Description: This shows the trajectory as if the observer were "standing" on the right ankle. The origin of the
+         coordinate system moves with the right ankle.
+       * Visualization (in Left Subplot - Right Ankle): The trajectory for the right ankle itself will appear as a single
+         point at the origin (0,0), since its position relative to itself is always zero.
+       * Visualization (in Right Subplot - Left Ankle): This is the most insightful part. The red loop shows the path of
+         the left ankle relative to the right ankle. It directly visualizes the motion of the left foot as it swings
+         around the right foot during the right limb's stance phase.
+
+   3. FR3: Left-Ankle Anchored (Green)
+       * Description: This shows the trajectory as if the observer were "standing" on the left ankle.
+       * Visualization (in Left Subplot - Right Ankle): The green loop shows the path of the right ankle relative to the
+         left ankle. This provides a direct view of how the right foot moves during its swing phase from the perspective
+         of the left foot.
+       * Visualization (in Right Subplot - Left Ankle): The trajectory for the left ankle will be a single point at the
+         origin (0,0).
+
+  Axes and Aspect Ratio
+
+  A critical feature of this figure is the command axis equal. This ensures that the X and Y axes are scaled
+  identically, so that a meter of distance is the same length in both horizontal and vertical directions. This provides
+  a true-to-scale, geometrically accurate representation of the trajectories, which is essential for correctly
+  interpreting the shape and dimensions of the relative motion loops.
+
+  Engineering Interpretation
+
+  This is a powerful analysis technique for deeply understanding inter-limb coordination.
+
+   * Isolating Relative Motion: By subtracting the global motion of the body (in FR2 and FR3), the plot isolates the pure
+     relative movement between the two feet. The shape, size, and orientation of the red and green loops are a "kinematic
+     signature" of the subject's coordination strategy.
+   * Gait Parameters: These relative motion loops can be used to directly measure key gait parameters. For example, the
+     maximum anterior-posterior extent of the green loop in the left subplot corresponds to the step length taken by the
+     right foot.
+   * Symmetry Analysis: Comparing the shape of the green loop in the left subplot (right foot relative to left) with the
+     red loop in the right subplot (left foot relative to right) provides a robust method for analyzing gait symmetry in
+     terms of relative kinematics.
+   * Clinical Insight: In clinical applications, changes in the shape of these relative motion loops can be sensitive
+     indicators of pathology. For example, a patient with a limp might show a much smaller or distorted loop for the
+     affected limb's swing phase.

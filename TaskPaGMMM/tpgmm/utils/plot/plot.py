@@ -200,8 +200,8 @@ def plot_ellipsoids_2d(
         
         # Calculate ellipse parameters
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
-        width = 2 * n_std * np.sqrt(eigenvalues[0])
-        height = 2 * n_std * np.sqrt(eigenvalues[1])
+        width = 1 * n_std * np.sqrt(eigenvalues[0])
+        height = 1 * n_std * np.sqrt(eigenvalues[1])
         
         # Create ellipse patch
         ellipse = Ellipse(
