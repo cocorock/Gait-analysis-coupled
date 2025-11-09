@@ -284,8 +284,8 @@ def main():
     # Plot GMM ellipsoids from different perspectives
     print("\nPlotting GMM ellipsoids...")
         
-    # fig = plt.figure(figsize=(10, 8))
-    # ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
 
     frame_idx = 0
     returned_ax = plot_ellipsoids(
@@ -296,8 +296,8 @@ def main():
     )
   
     
-    # fig = plt.figure(figsize=(10, 8))
-    # ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
 
     frame_idx = 1
     returned_ax = plot_ellipsoids(
@@ -307,7 +307,7 @@ def main():
         legend=True
     )
 
-    # plt.show()
+    plt.show()
     
     # Perform Gaussian Mixture Regression
     print("\nPerforming Gaussian Mixture Regression...")
