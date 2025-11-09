@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-Final Gait Analysis TPGMM Training Script
+Final Gait Analysis TPGMM Training Script - Cyclical Version
 
 This script trains a Task Parameterized Gaussian Mixture Model (TPGMM) with 3 frames of reference
 for gait analysis using ankle position and velocity data from both legs.
 Following the structure from gait_example1time.ipynb with plotting functionality.
+
+MODIFICATION: Creates continuous cyclical trajectories by adding the first point at the end.
 """
 
 import json
@@ -22,7 +24,7 @@ from tpgmm.tpgmm.tpgmm import TPGMM
 
 
 def load_gait_data(json_path):
-    """Load and process gait data from JSON file following notebook structure."""
+    """Load and process gait data from JSON file with cyclical trajectory modification."""
     with open(json_path, 'r') as f:
         data = json.load(f)
     
@@ -38,7 +40,8 @@ def load_gait_data(json_path):
         
         if frame_idx == 0:  # Print info only once
             print(f"Processing {num_cycles} gait cycles from {len(frames)} frames")
-            print(f"Each cycle has {interpolation_points} interpolation points")
+            print(f"Original interpolation points: {interpolation_points}")
+            print(f"Modified interpolation points (with cyclical): {interpolation_points + 1}")
         
         frame_trajectories = []
         
@@ -49,22 +52,29 @@ def load_gait_data(json_path):
             left_ankle_pos = np.array(cycle_data['left_ankle_pos'])
             left_ankle_vel = np.array(cycle_data['left_ankle_vel'])
             
-            # Create time vector (normalized 0-1)
-            time_vector = np.linspace(0, 1, interpolation_points)
+            # CYCLICAL MODIFICATION: Add first point at the end for continuity
+            # Append first column to the end of each array
+            right_ankle_pos_cyclical = np.column_stack([right_ankle_pos, right_ankle_pos[:, 0]])
+            right_ankle_vel_cyclical = np.column_stack([right_ankle_vel, right_ankle_vel[:, 0]])
+            left_ankle_pos_cyclical = np.column_stack([left_ankle_pos, left_ankle_pos[:, 0]])
+            left_ankle_vel_cyclical = np.column_stack([left_ankle_vel, left_ankle_vel[:, 0]])
+            
+            # Create time vector (normalized 0-1) with one extra point for cyclical
+            time_vector = np.linspace(0, 1, interpolation_points + 1)
             
             # Create 9-dimensional feature space as described in summary:
             # [time, right_ankle_pos_x, right_ankle_pos_y, right_ankle_vel_x, right_ankle_vel_y,
             #  left_ankle_pos_x, left_ankle_pos_y, left_ankle_vel_x, left_ankle_vel_y]
             trajectory = np.column_stack([
-                time_vector,               # time (0-1)
-                right_ankle_pos[0, :],     # right ankle X position
-                right_ankle_pos[1, :],     # right ankle Y position
-                right_ankle_vel[0, :],     # right ankle X velocity
-                right_ankle_vel[1, :],     # right ankle Y velocity
-                left_ankle_pos[0, :],      # left ankle X position
-                left_ankle_pos[1, :],      # left ankle Y position
-                left_ankle_vel[0, :],      # left ankle X velocity
-                left_ankle_vel[1, :]       # left ankle Y velocity
+                time_vector,                           # time (0-1)
+                right_ankle_pos_cyclical[0, :],        # right ankle X position
+                right_ankle_pos_cyclical[1, :],        # right ankle Y position
+                right_ankle_vel_cyclical[0, :],        # right ankle X velocity
+                right_ankle_vel_cyclical[1, :],        # right ankle Y velocity
+                left_ankle_pos_cyclical[0, :],         # left ankle X position
+                left_ankle_pos_cyclical[1, :],         # left ankle Y position
+                left_ankle_vel_cyclical[0, :],         # left ankle X velocity
+                left_ankle_vel_cyclical[1, :]          # left ankle Y velocity
             ])
             
             frame_trajectories.append(trajectory)
@@ -105,14 +115,14 @@ def plot_input_trajectories(all_trajectories):
             label = frame_name if traj_idx == 0 else ""
             ax_left.plot(traj[:, 5], traj[:, 6], color=color, alpha=alpha, linewidth=linewidth, label=label)
     
-    ax_right.set_title('Right Ankle Position Trajectories\nAll Frames Combined', fontsize=14, fontweight='bold')
+    ax_right.set_title('Right Ankle Position Trajectories (Cyclical)\nAll Frames Combined', fontsize=14, fontweight='bold')
     ax_right.set_xlabel('X Position (m)')
     ax_right.set_ylabel('Y Position (m)')
     ax_right.grid(True, alpha=0.3)
     ax_right.legend()
     ax_right.axis('equal')
     
-    ax_left.set_title('Left Ankle Position Trajectories\nAll Frames Combined', fontsize=14, fontweight='bold')
+    ax_left.set_title('Left Ankle Position Trajectories (Cyclical)\nAll Frames Combined', fontsize=14, fontweight='bold')
     ax_left.set_xlabel('X Position (m)')
     ax_left.set_ylabel('Y Position (m)')
     ax_left.grid(True, alpha=0.3)
@@ -120,7 +130,7 @@ def plot_input_trajectories(all_trajectories):
     ax_left.axis('equal')
     
     plt.tight_layout()
-    plt.savefig('plots/input_trajectories_positions.png', dpi=300, bbox_inches='tight')
+    plt.savefig('plots/input_trajectories_positions_cyclical.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     # Plot ankle velocities - merged into one plot per side
@@ -143,14 +153,14 @@ def plot_input_trajectories(all_trajectories):
             label = frame_name if traj_idx == 0 else ""
             ax_left.plot(traj[:, 7], traj[:, 8], color=color, alpha=alpha, linewidth=linewidth, label=label)
     
-    ax_right.set_title('Right Ankle Velocity Trajectories\nAll Frames Combined', fontsize=14, fontweight='bold')
+    ax_right.set_title('Right Ankle Velocity Trajectories (Cyclical)\nAll Frames Combined', fontsize=14, fontweight='bold')
     ax_right.set_xlabel('X Velocity (m/s)')
     ax_right.set_ylabel('Y Velocity (m/s)')
     ax_right.grid(True, alpha=0.3)
     ax_right.legend()
     ax_right.axis('equal')
     
-    ax_left.set_title('Left Ankle Velocity Trajectories\nAll Frames Combined', fontsize=14, fontweight='bold')
+    ax_left.set_title('Left Ankle Velocity Trajectories (Cyclical)\nAll Frames Combined', fontsize=14, fontweight='bold')
     ax_left.set_xlabel('X Velocity (m/s)')
     ax_left.set_ylabel('Y Velocity (m/s)')
     ax_left.grid(True, alpha=0.3)
@@ -158,10 +168,10 @@ def plot_input_trajectories(all_trajectories):
     ax_left.axis('equal')
     
     plt.tight_layout()
-    plt.savefig('plots/input_trajectories_velocities.png', dpi=300, bbox_inches='tight')
+    plt.savefig('plots/input_trajectories_velocities_cyclical.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print("Input trajectory plots saved to plots/ directory")
+    print("Cyclical input trajectory plots saved to plots/ directory")
 
 
 def prepare_tpgmm_data(all_trajectories):
@@ -231,18 +241,18 @@ def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
                label=f'Optimal (n={best_n_components})')
     ax1.set_xlabel('Number of Components', fontsize=12, fontweight='bold')
     ax1.set_ylabel('BIC Score', fontsize=12, fontweight='bold')
-    ax1.set_title('Bayesian Information Criterion (BIC)', fontsize=14, fontweight='bold')
+    ax1.set_title('Bayesian Information Criterion (BIC) - Cyclical Data', fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3)
     ax1.legend(fontsize=12)
     ax1.tick_params(labelsize=11)
     
     plt.tight_layout()
-    plt.savefig('plots/model_selection_criteria.png', dpi=300, bbox_inches='tight')
+    plt.savefig('plots/model_selection_criteria_cyclical.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f'\n=== Model Selection Results ===')
+    print(f'\n=== Model Selection Results (Cyclical) ===')
     print(f'BIC optimal n_components: {best_n_components} (BIC = {lowest_bic_score:.2f})')
-    print(f'Model selection plot saved to plots/model_selection_criteria.png')
+    print(f'Model selection plot saved to plots/model_selection_criteria_cyclical.png')
     
     # Return results dictionary
     return {
@@ -255,7 +265,7 @@ def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
 
 def main():
     """Main training pipeline."""
-    print("=== Final Gait Analysis TPGMM Training ===")
+    print("=== Final Gait Analysis TPGMM Training - Cyclical Version ===")
     
     # Configuration
     reg_factor = 1e-3
@@ -266,14 +276,14 @@ def main():
     pkls_dir = "/home/jemajuinta/ws/Gait-analysis-coupled/pkls"
     os.makedirs(pkls_dir, exist_ok=True)
     
-    model_save_path = os.path.join(pkls_dir, "gait_tpgmm_model_final.pkl")
+    model_save_path = os.path.join(pkls_dir, "gait_tpgmm_model_cyclical.pkl")
     
     print(f"JSON data path: {json_path}")
     print(f"Model save path: {model_save_path}")
     print()
     
     # Step 1: Load and process data
-    print("Step 1: Loading gait data...")
+    print("Step 1: Loading gait data with cyclical modification...")
     all_trajectories = load_gait_data(json_path)
     
     # Step 2: Plot input trajectories
@@ -313,7 +323,8 @@ def main():
         ],
         'frame_names': ['FR1', 'FR2', 'FR3'],
         'num_frames': 3,
-        'feature_dims': 9
+        'feature_dims': 9,
+        'cyclical_modification': True  # Flag to indicate this model uses cyclical data
     }
     
     with open(model_save_path, 'wb') as f:
@@ -321,7 +332,7 @@ def main():
         
     print(f"Model saved to: {model_save_path}")
     print("\n=== Training Complete ===")
-    print("The model can now be loaded for Gaussian Mixture Regression (GMR).")
+    print("The cyclical model can now be loaded for Gaussian Mixture Regression (GMR).")
 
 
 if __name__ == "__main__":

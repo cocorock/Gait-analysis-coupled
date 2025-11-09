@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Final Gait Analysis TPGMM Training Script
+Final Gait Analysis TPGMM Training Script - 5D Version
 
-This script trains a Task Parameterized Gaussian Mixture Model (TPGMM) with 3 frames of reference
-for gait analysis using ankle position and velocity data from both legs.
-Following the structure from gait_example1time.ipynb with plotting functionality.
+This script trains a Task Parameterized Gaussian Mixture Model (TPGMM) with 2 frames of reference
+for gait analysis using only right ankle position and velocity data (5D feature space).
+Based on final_gait_trainer.py but simplified to 5D: time, right_ankle_pos_x, right_ankle_pos_y, right_ankle_vel_x, right_ankle_vel_y.
 """
 
 import json
@@ -22,12 +22,12 @@ from tpgmm.tpgmm.tpgmm import TPGMM
 
 
 def load_gait_data(json_path):
-    """Load and process gait data from JSON file following notebook structure."""
+    """Load and process gait data from JSON file - 5D version with only FR1 and FR2."""
     with open(json_path, 'r') as f:
         data = json.load(f)
     
-    # Get kinematics data from all 3 frames
-    frames = ['FR1', 'FR2', 'FR3']
+    # Get kinematics data from only 2 frames (FR1 and FR2)
+    frames = ['FR1', 'FR2']
     all_trajectories = []
     
     # Process each frame of reference
@@ -43,28 +43,21 @@ def load_gait_data(json_path):
         frame_trajectories = []
         
         for cycle_idx, cycle_data in enumerate(kinematics):
-            # Extract ankle data for both legs
+            # Extract only right ankle data
             right_ankle_pos = np.array(cycle_data['right_ankle_pos'])
-            right_ankle_vel = np.array(cycle_data['right_ankle_vel']) 
-            left_ankle_pos = np.array(cycle_data['left_ankle_pos'])
-            left_ankle_vel = np.array(cycle_data['left_ankle_vel'])
+            right_ankle_vel = np.array(cycle_data['right_ankle_vel'])
             
             # Create time vector (normalized 0-1)
             time_vector = np.linspace(0, 1, interpolation_points)
             
-            # Create 9-dimensional feature space as described in summary:
-            # [time, right_ankle_pos_x, right_ankle_pos_y, right_ankle_vel_x, right_ankle_vel_y,
-            #  left_ankle_pos_x, left_ankle_pos_y, left_ankle_vel_x, left_ankle_vel_y]
+            # Create 5-dimensional feature space:
+            # [time, right_ankle_pos_x, right_ankle_pos_y, right_ankle_vel_x, right_ankle_vel_y]
             trajectory = np.column_stack([
                 time_vector,               # time (0-1)
                 right_ankle_pos[0, :],     # right ankle X position
                 right_ankle_pos[1, :],     # right ankle Y position
                 right_ankle_vel[0, :],     # right ankle X velocity
-                right_ankle_vel[1, :],     # right ankle Y velocity
-                left_ankle_pos[0, :],      # left ankle X position
-                left_ankle_pos[1, :],      # left ankle Y position
-                left_ankle_vel[0, :],      # left ankle X velocity
-                left_ankle_vel[1, :]       # left ankle Y velocity
+                right_ankle_vel[1, :]      # right ankle Y velocity
             ])
             
             frame_trajectories.append(trajectory)
@@ -78,15 +71,15 @@ def load_gait_data(json_path):
 
 
 def plot_input_trajectories(all_trajectories):
-    """Plot input trajectories for all frames of reference."""
-    frames = ['FR1', 'FR2', 'FR3']
-    frame_colors = {'FR1': 'blue', 'FR2': 'red', 'FR3': 'green'}
+    """Plot input trajectories for FR1 and FR2 frames - right ankle only."""
+    frames = ['FR1', 'FR2']
+    frame_colors = {'FR1': 'blue', 'FR2': 'red'}
     
     # Create plots directory
     os.makedirs('plots', exist_ok=True)
     
-    # Plot ankle positions - merged into one plot per side
-    fig, (ax_right, ax_left) = plt.subplots(1, 2, figsize=(16, 8))
+    # Plot right ankle positions only
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
     
     for frame_idx, (frame_name, trajectories) in enumerate(zip(frames, all_trajectories)):
         color = frame_colors[frame_name]
@@ -96,35 +89,21 @@ def plot_input_trajectories(all_trajectories):
             alpha = 0.6 if traj_idx > 0 else 0.8
             linewidth = 1.5 if traj_idx == 0 else 1
             label = frame_name if traj_idx == 0 else ""
-            ax_right.plot(traj[:, 1], traj[:, 2], color=color, alpha=alpha, linewidth=linewidth, label=label)
-        
-        # Left ankle positions - all frames in one plot
-        for traj_idx, traj in enumerate(trajectories):
-            alpha = 0.6 if traj_idx > 0 else 0.8
-            linewidth = 1.5 if traj_idx == 0 else 1
-            label = frame_name if traj_idx == 0 else ""
-            ax_left.plot(traj[:, 5], traj[:, 6], color=color, alpha=alpha, linewidth=linewidth, label=label)
+            ax.plot(traj[:, 1], traj[:, 2], color=color, alpha=alpha, linewidth=linewidth, label=label)
     
-    ax_right.set_title('Right Ankle Position Trajectories\nAll Frames Combined', fontsize=14, fontweight='bold')
-    ax_right.set_xlabel('X Position (m)')
-    ax_right.set_ylabel('Y Position (m)')
-    ax_right.grid(True, alpha=0.3)
-    ax_right.legend()
-    ax_right.axis('equal')
-    
-    ax_left.set_title('Left Ankle Position Trajectories\nAll Frames Combined', fontsize=14, fontweight='bold')
-    ax_left.set_xlabel('X Position (m)')
-    ax_left.set_ylabel('Y Position (m)')
-    ax_left.grid(True, alpha=0.3)
-    ax_left.legend()
-    ax_left.axis('equal')
+    ax.set_title('Right Ankle Position Trajectories - 5D Version\\nFR1 and FR2 Combined', fontsize=14, fontweight='bold')
+    ax.set_xlabel('X Position (m)')
+    ax.set_ylabel('Y Position (m)')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    ax.axis('equal')
     
     plt.tight_layout()
-    plt.savefig('plots/input_trajectories_positions.png', dpi=300, bbox_inches='tight')
+    plt.savefig('plots/input_trajectories_positions_5d.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    # Plot ankle velocities - merged into one plot per side
-    fig, (ax_right, ax_left) = plt.subplots(1, 2, figsize=(16, 8))
+    # Plot right ankle velocities only
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
     
     for frame_idx, (frame_name, trajectories) in enumerate(zip(frames, all_trajectories)):
         color = frame_colors[frame_name]
@@ -134,40 +113,26 @@ def plot_input_trajectories(all_trajectories):
             alpha = 0.6 if traj_idx > 0 else 0.8
             linewidth = 1.5 if traj_idx == 0 else 1
             label = frame_name if traj_idx == 0 else ""
-            ax_right.plot(traj[:, 3], traj[:, 4], color=color, alpha=alpha, linewidth=linewidth, label=label)
-        
-        # Left ankle velocities - all frames in one plot
-        for traj_idx, traj in enumerate(trajectories):
-            alpha = 0.6 if traj_idx > 0 else 0.8
-            linewidth = 1.5 if traj_idx == 0 else 1
-            label = frame_name if traj_idx == 0 else ""
-            ax_left.plot(traj[:, 7], traj[:, 8], color=color, alpha=alpha, linewidth=linewidth, label=label)
+            ax.plot(traj[:, 3], traj[:, 4], color=color, alpha=alpha, linewidth=linewidth, label=label)
     
-    ax_right.set_title('Right Ankle Velocity Trajectories\nAll Frames Combined', fontsize=14, fontweight='bold')
-    ax_right.set_xlabel('X Velocity (m/s)')
-    ax_right.set_ylabel('Y Velocity (m/s)')
-    ax_right.grid(True, alpha=0.3)
-    ax_right.legend()
-    ax_right.axis('equal')
-    
-    ax_left.set_title('Left Ankle Velocity Trajectories\nAll Frames Combined', fontsize=14, fontweight='bold')
-    ax_left.set_xlabel('X Velocity (m/s)')
-    ax_left.set_ylabel('Y Velocity (m/s)')
-    ax_left.grid(True, alpha=0.3)
-    ax_left.legend()
-    ax_left.axis('equal')
+    ax.set_title('Right Ankle Velocity Trajectories - 5D Version\\nFR1 and FR2 Combined', fontsize=14, fontweight='bold')
+    ax.set_xlabel('X Velocity (m/s)')
+    ax.set_ylabel('Y Velocity (m/s)')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    ax.axis('equal')
     
     plt.tight_layout()
-    plt.savefig('plots/input_trajectories_velocities.png', dpi=300, bbox_inches='tight')
+    plt.savefig('plots/input_trajectories_velocities_5d.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print("Input trajectory plots saved to plots/ directory")
+    print("Input trajectory plots saved to plots/ directory (5D version)")
 
 
 def prepare_tpgmm_data(all_trajectories):
-    """Prepare data for TPGMM training following notebook structure."""
-    # Convert list of 3 trajectory arrays to stacked format
-    # all_trajectories: list of 3 arrays, each with shape (num_cycles, num_points, num_features)
+    """Prepare data for TPGMM training - 5D version with 2 frames."""
+    # Convert list of 2 trajectory arrays to stacked format
+    # all_trajectories: list of 2 arrays, each with shape (num_cycles, num_points, num_features)
     
     num_frames = len(all_trajectories)
     num_trajectories, num_samples, num_features = all_trajectories[0].shape
@@ -179,15 +144,14 @@ def prepare_tpgmm_data(all_trajectories):
     reshaped_trajectories = reshaped_trajectories.reshape(num_frames, num_trajectories * num_samples, num_features)
     
     print(f"Reshaped trajectories shape: {reshaped_trajectories.shape}")
-    print(f"Features: [time, right_ankle_pos_x, right_ankle_pos_y, right_ankle_vel_x, right_ankle_vel_y,")
-    print(f"          left_ankle_pos_x, left_ankle_pos_y, left_ankle_vel_x, left_ankle_vel_y]")
+    print(f"Features: [time, right_ankle_pos_x, right_ankle_pos_y, right_ankle_vel_x, right_ankle_vel_y]")
     
     return reshaped_trajectories
 
 
-def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
-    """Find optimal number of components using BIC scores with visualization."""
-    print("\nFinding optimal number of components...")
+def find_optimal_components(reshaped_trajectories, component_range=(3, 12)):
+    """Find optimal number of components using BIC scores with visualization - 5D version."""
+    print("\\nFinding optimal number of components (5D version)...")
     
     # Create plots directory
     os.makedirs('plots', exist_ok=True)
@@ -198,7 +162,7 @@ def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
     best_n_components = None
     lowest_bic_score = float('inf')
     
-    # Loop through n_components
+    # Loop through n_components (reduced range for 5D)
     for n_components in range(component_range[0], component_range[1]):
         print(f'Fitting TPGMM with n_components={n_components}...')
         
@@ -208,7 +172,7 @@ def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
         # Fit the model with the trajectories
         tpgmm.fit(reshaped_trajectories)
         
-        # Calculate the BIC score (AIC not available in this implementation)
+        # Calculate the BIC score
         bic_score = tpgmm.bic(reshaped_trajectories)
         
         print(f'n_components={n_components}: BIC={bic_score:.2f}')
@@ -231,18 +195,18 @@ def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
                label=f'Optimal (n={best_n_components})')
     ax1.set_xlabel('Number of Components', fontsize=12, fontweight='bold')
     ax1.set_ylabel('BIC Score', fontsize=12, fontweight='bold')
-    ax1.set_title('Bayesian Information Criterion (BIC)', fontsize=14, fontweight='bold')
+    ax1.set_title('Bayesian Information Criterion (BIC) - 5D Version', fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3)
     ax1.legend(fontsize=12)
     ax1.tick_params(labelsize=11)
     
     plt.tight_layout()
-    plt.savefig('plots/model_selection_criteria.png', dpi=300, bbox_inches='tight')
+    plt.savefig('plots/model_selection_criteria_5d.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f'\n=== Model Selection Results ===')
+    print(f'\\n=== Model Selection Results (5D) ===')
     print(f'BIC optimal n_components: {best_n_components} (BIC = {lowest_bic_score:.2f})')
-    print(f'Model selection plot saved to plots/model_selection_criteria.png')
+    print(f'Model selection plot saved to plots/model_selection_criteria_5d.png')
     
     # Return results dictionary
     return {
@@ -254,50 +218,50 @@ def find_optimal_components(reshaped_trajectories, component_range=(8, 19)):
 
 
 def main():
-    """Main training pipeline."""
-    print("=== Final Gait Analysis TPGMM Training ===")
+    """Main training pipeline - 5D version."""
+    print("=== Final Gait Analysis TPGMM Training - 5D Version ===")
     
     # Configuration
-    reg_factor = 1e-3
-    threshold = 1e-5
+    reg_factor = 1e-2
+    threshold = 1e-4
     json_path = "/home/jemajuinta/ws/Gait-analysis-coupled/alpha/Gait Data/4D/gait_analysis_export_subject35.json"
     
     # Create pkls directory if it doesn't exist
     pkls_dir = "/home/jemajuinta/ws/Gait-analysis-coupled/pkls"
     os.makedirs(pkls_dir, exist_ok=True)
     
-    model_save_path = os.path.join(pkls_dir, "gait_tpgmm_model_final.pkl")
+    model_save_path = os.path.join(pkls_dir, "gait_tpgmm_model_5d.pkl")
     
     print(f"JSON data path: {json_path}")
     print(f"Model save path: {model_save_path}")
     print()
     
     # Step 1: Load and process data
-    print("Step 1: Loading gait data...")
+    print("Step 1: Loading gait data (5D version)...")
     all_trajectories = load_gait_data(json_path)
     
     # Step 2: Plot input trajectories
-    print("\nStep 2: Plotting input trajectories...")
+    print("\\nStep 2: Plotting input trajectories (5D version)...")
     plot_input_trajectories(all_trajectories)
     
     # Step 3: Prepare TPGMM data
-    print("\nStep 3: Preparing TPGMM data...")
+    print("\\nStep 3: Preparing TPGMM data (5D version)...")
     reshaped_trajectories = prepare_tpgmm_data(all_trajectories)
     
     # Step 4: Find optimal components using BIC
-    print("\nStep 4: Finding optimal components using BIC...")
-    model_selection_results = find_optimal_components(reshaped_trajectories, component_range=(3, 16))
+    print("\\nStep 4: Finding optimal components using BIC (5D version)...")
+    model_selection_results = find_optimal_components(reshaped_trajectories, component_range=(3, 17))
     best_n_components = model_selection_results['best_n_components']
     
     # Step 5: Train final TPGMM with optimal components
-    print(f"\nStep 5: Training final TPGMM with n_components={best_n_components}...")
+    print(f"\\nStep 5: Training final TPGMM with n_components={best_n_components} (5D version)...")
     tpgmm = TPGMM(n_components=best_n_components, verbose=True, reg_factor=reg_factor, threshold=threshold)
     tpgmm.fit(reshaped_trajectories)
     
-    print("TPGMM training completed!")
+    print("TPGMM training completed (5D version)!")
     
     # Step 6: Save model
-    print("\nStep 6: Saving model...")
+    print("\\nStep 6: Saving model (5D version)...")
     model_data = {
         'tpgmm': tpgmm,
         'n_components': best_n_components,
@@ -308,20 +272,19 @@ def main():
         'reshaped_trajectories': reshaped_trajectories,
         'model_selection_results': model_selection_results,
         'feature_names': [
-            'time', 'right_ankle_pos_x', 'right_ankle_pos_y', 'right_ankle_vel_x', 'right_ankle_vel_y',
-            'left_ankle_pos_x', 'left_ankle_pos_y', 'left_ankle_vel_x', 'left_ankle_vel_y'
+            'time', 'right_ankle_pos_x', 'right_ankle_pos_y', 'right_ankle_vel_x', 'right_ankle_vel_y'
         ],
-        'frame_names': ['FR1', 'FR2', 'FR3'],
-        'num_frames': 3,
-        'feature_dims': 9
+        'frame_names': ['FR1', 'FR2'],
+        'num_frames': 2,
+        'feature_dims': 5
     }
     
     with open(model_save_path, 'wb') as f:
         pickle.dump(model_data, f)
         
     print(f"Model saved to: {model_save_path}")
-    print("\n=== Training Complete ===")
-    print("The model can now be loaded for Gaussian Mixture Regression (GMR).")
+    print("\\n=== Training Complete (5D Version) ===")
+    print("The 5D model can now be loaded for Gaussian Mixture Regression (GMR).")
 
 
 if __name__ == "__main__":
