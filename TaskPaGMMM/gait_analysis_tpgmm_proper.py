@@ -75,7 +75,7 @@ class ProperGaitAnalysisTTPGMM:
         
         # Process kinematics data properly
         fr1_data = self.raw_data['kinematics_data']['FR1']
-        fr2_data = self.raw_data['kinematics_data']['FR2']
+        fr2_data = self.raw_data['kinematics_data']['FR1']
         
         # Extract trajectories for BOTH left and right ankles
         trajectories = self._extract_proper_trajectories(fr1_data, fr2_data)
@@ -491,7 +491,7 @@ class ProperGaitAnalysisTTPGMM:
         
         plt.suptitle('PROPER Gait Analysis: LEFT vs RIGHT Ankle Trajectories', fontsize=16)
         plt.tight_layout()
-        plt.savefig('/home/jemajuinta/ws/Gait-analysis-coupled/TaskPaGMMM/proper_gait_visualization.png', dpi=150)
+        plt.savefig('D:\\Github\\Gait-analysis-coupled\\TaskPaGMMM\\proper_gait_visualization.png', dpi=150)
         plt.show()
         
         print("✓ Proper visualization complete - saved as proper_gait_visualization.png")
@@ -772,7 +772,7 @@ def main():
     Main function to run the PROPER gait analysis
     """
     # Path to the gait data
-    data_path = "/home/jemajuinta/ws/Gait-analysis-coupled/TaskPaGMMM/examples/7days1/gait_analysis_export_subject35v4.json"
+    data_path = "D:\\Github\\Gait-analysis-coupled\\TaskPaGMMM\\examples\\7days1\\gait_analysis_export_subject35v4.json"
     
     # Create analyzer with subsampling for efficiency
     analyzer = ProperGaitAnalysisTTPGMM(data_path, subsample_factor=5)  # Every 10th point
