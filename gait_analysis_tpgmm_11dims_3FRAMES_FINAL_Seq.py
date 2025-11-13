@@ -63,7 +63,7 @@ class OptimizedTPGMM:
     - Numerical stability with log-space operations
     """
     
-    def __init__(self, n_components, n_frames, n_features, reg_factor=1e-3, 
+    def __init__(self, n_components, n_frames, n_features, reg_factor=1e-4, 
                  max_iter=100, tol=1e-4, verbose=True):
         """Initialize Optimized TPGMM model"""
         self.K = n_components
@@ -419,7 +419,7 @@ class OptimizedGMR:
         return mu_out, sigma_out
 
 
-def train_single_model(K, X_frames, reg_factor=1e-3, verbose=False):
+def train_single_model(K, X_frames, reg_factor=1e-4, verbose=False):
     """Train a single TPGMM model (for parallel execution)"""
     n_frames = X_frames.shape[0]
     n_features = X_frames.shape[2]
@@ -440,7 +440,7 @@ def train_single_model(K, X_frames, reg_factor=1e-3, verbose=False):
     return K, model, bic, log_likelihood
 
 
-def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_factor=1e-3):
+def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_factor=1e-4):
     """
     Train multiple TPGMM models IN PARALLEL and select best via BIC
     
@@ -488,6 +488,69 @@ def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_
     return best_model, results_dict
 
 
+def train_tpgmm_sequential(X_frames, component_range=range(3, 21), reg_factor=1e-4):
+    """
+    Train multiple TPGMM models SEQUENTIALLY and select best via BIC
+    
+    This trains one model at a time - useful for debugging or comparing with parallel results.
+    """
+    print("\n" + "="*70)
+    print("STEP 4: SEQUENTIAL Model Selection with BIC")
+    print("="*70)
+    print(f"Testing K = {list(component_range)}")
+    print(f"Using sequential processing (one model at a time)")
+    
+    start_time = time.time()
+    
+    # Initialize storage for results
+    K_values = []
+    models = []
+    bic_scores = []
+    log_likelihoods = []
+    
+    # Train models one by one
+    for i, K in enumerate(component_range):
+        print(f"\n[{i+1}/{len(component_range)}] Training model with K = {K}...")
+        model_start = time.time()
+        
+        # Train single model
+        K_val, model, bic, log_likelihood = train_single_model(
+            K, X_frames, reg_factor, verbose=True
+        )
+        
+        # Store results
+        K_values.append(K_val)
+        models.append(model)
+        bic_scores.append(bic)
+        log_likelihoods.append(log_likelihood)
+        
+        model_time = time.time() - model_start
+        print(f"  ✓ K={K} completed in {model_time:.2f}s | BIC: {bic:.2f} | LL: {log_likelihood:.2f}")
+    
+    # Find best model
+    best_idx = np.argmin(bic_scores)
+    best_model = models[best_idx]
+    best_K = K_values[best_idx]
+    
+    elapsed = time.time() - start_time
+    
+    print(f"\n{'='*70}")
+    print(f"✓ Sequential training completed in {elapsed:.2f} seconds")
+    print(f"✓ Best model: K = {best_K}")
+    print(f"✓ Best BIC: {bic_scores[best_idx]:.2f}")
+    print(f"✓ Average time per model: {elapsed/len(component_range):.2f}s")
+    print(f"{'='*70}")
+    
+    results_dict = {
+        'n_components': K_values,
+        'models': models,
+        'bic': bic_scores,
+        'log_likelihood': log_likelihoods
+    }
+    
+    return best_model, results_dict
+
+
 def load_gait_data(filepath):
     """Load gait analysis data from JSON"""
     print("\n" + "="*70)
@@ -506,7 +569,7 @@ def load_gait_data(filepath):
 
 def extract_trajectories(data, subsample_factor=2):
     """
-    Extract trajectories with ALL 11 DIMENSIONS
+    Extract trajectories with ALL 11 DIMENSIONS from 3 FRAMES (FR1, FR2, FR3)
     
     Dimensions:
     0-1: right_ankle_pos (x, y) from right_leg_kinematics
@@ -518,14 +581,16 @@ def extract_trajectories(data, subsample_factor=2):
     10: time (normalized)
     """
     print("\n" + "="*70)
-    print("STEP 2: Extracting Trajectories (11 DIMENSIONS)")
+    print("STEP 2: Extracting Trajectories (11 DIMENSIONS, 3 FRAMES)")
     print("="*70)
     
     fr1_data = data['kinematics_data']['FR1']
     fr2_data = data['kinematics_data']['FR2']
+    fr3_data = data['kinematics_data']['FR3']
     
     trajectories_fr1 = []
     trajectories_fr2 = []
+    trajectories_fr3 = []
     
     n_demos = len(fr1_data['right_leg_kinematics'])
     print(f"Processing {n_demos} demonstrations with subsampling factor: {subsample_factor}...")
@@ -537,9 +602,11 @@ def extract_trajectories(data, subsample_factor=2):
     print("  [7-8]: Left ankle velocity (x, y)")
     print("  [9]:   Left ankle angle (deg)")
     print("  [10]:  Time (normalized)")
+    print("\nFrames: FR1, FR2, FR3")
     
-    for demo_fr1, demo_fr2 in zip(fr1_data['right_leg_kinematics'], 
-                                   fr2_data['right_leg_kinematics']):
+    for demo_fr1, demo_fr2, demo_fr3 in zip(fr1_data['right_leg_kinematics'], 
+                                              fr2_data['right_leg_kinematics'],
+                                              fr3_data['right_leg_kinematics']):
         # FR1 trajectory - Extract ALL dimensions
         # All data is in the right_leg_kinematics section (including left ankle data)
         right_ankle_pos = np.array(demo_fr1['right_ankle_pos'])
@@ -601,27 +668,59 @@ def extract_trajectories(data, subsample_factor=2):
         ]).T
         
         trajectories_fr2.append(traj_fr2)
+        
+        # FR3 trajectory - same structure
+        right_ankle_pos = np.array(demo_fr3['right_ankle_pos'])
+        right_ankle_vel = np.array(demo_fr3['right_ankle_vel'])
+        ankle_right_deg = np.array(demo_fr3['ankle_right_deg'])
+        
+        # Left ankle data is also in the right_leg_kinematics section
+        left_ankle_pos = np.array(demo_fr3['left_ankle_pos'])
+        left_ankle_vel = np.array(demo_fr3['left_ankle_vel'])
+        ankle_left_deg = np.array(demo_fr3['ankle_left_deg'])
+        
+        indices = np.arange(0, n_points, subsample_factor)
+        time_vector = np.linspace(0, 1, n_subsampled)
+        
+        traj_fr3 = np.vstack([
+            right_ankle_pos[0, indices],
+            right_ankle_pos[1, indices],
+            right_ankle_vel[0, indices],
+            right_ankle_vel[1, indices],
+            np.deg2rad(ankle_right_deg[indices]),
+            left_ankle_pos[0, indices],
+            left_ankle_pos[1, indices],
+            left_ankle_vel[0, indices],
+            left_ankle_vel[1, indices],
+            np.deg2rad(ankle_left_deg[indices]),
+            time_vector
+        ]).T
+        
+        trajectories_fr3.append(traj_fr3)
     
     trajectories_fr1 = np.array(trajectories_fr1)
     trajectories_fr2 = np.array(trajectories_fr2)
+    trajectories_fr3 = np.array(trajectories_fr3)
     
     print(f"\n✓ FR1 trajectories shape: {trajectories_fr1.shape}")
     print(f"✓ FR2 trajectories shape: {trajectories_fr2.shape}")
+    print(f"✓ FR3 trajectories shape: {trajectories_fr3.shape}")
     print(f"✓ Subsampling: Every {subsample_factor}th point used")
     print(f"✓ Total dimensions: {trajectories_fr1.shape[2]} (including time)")
     
-    return trajectories_fr1, trajectories_fr2
+    return trajectories_fr1, trajectories_fr2, trajectories_fr3
 
 
-def prepare_tpgmm_data(trajectories_fr1, trajectories_fr2):
-    """Prepare data for TPGMM training"""
+def prepare_tpgmm_data(trajectories_fr1, trajectories_fr2, trajectories_fr3):
+    """Prepare data for TPGMM training with 3 frames"""
     print("\n" + "="*70)
-    print("STEP 3: Preparing Data for TPGMM")
+    print("STEP 3: Preparing Data for TPGMM (3 Frames)")
     print("="*70)
     
     X_fr1 = np.vstack(trajectories_fr1)
     X_fr2 = np.vstack(trajectories_fr2)
-    X_frames = np.stack([X_fr1, X_fr2], axis=0)
+    X_fr3 = np.vstack(trajectories_fr3)
+    X_frames = np.stack([X_fr1, X_fr2, X_fr3], axis=0)
     
     print(f"✓ Data shape for TPGMM: {X_frames.shape}")
     print(f"  Frames: {X_frames.shape[0]}")
@@ -662,14 +761,14 @@ def visualize_bic_results(results):
 
 
 def generate_trajectory_with_gmr(best_model, trajectories_fr1):
-    """Generate smooth trajectory using optimized GMR (11 dimensions)"""
+    """Generate smooth trajectory using optimized GMR (11 dimensions, 3 frames)"""
     print("\n" + "="*70)
-    print("STEP 5: Trajectory Generation with Optimized GMR (11 Dimensions)")
+    print("STEP 5: Trajectory Generation with Optimized GMR (11 Dimensions, 3 Frames)")
     print("="*70)
     
     n_features = 11  # Updated to 11 dimensions
-    A_frames = [np.eye(n_features), np.eye(n_features)]
-    b_frames = [np.zeros(n_features), np.zeros(n_features)]
+    A_frames = [np.eye(n_features), np.eye(n_features), np.eye(n_features)]
+    b_frames = [np.zeros(n_features), np.zeros(n_features), np.zeros(n_features)]
     
     n_query = 200
     time_query = np.linspace(0, 1, n_query).reshape(-1, 1)
@@ -793,7 +892,7 @@ def plot_position_trajectories_xy(trajectories_fr1, mu_generated, sigma_generate
         cov_xy = sigma_generated[idx][[0, 1], :][:, [0, 1]]
         eigenvalues, eigenvectors = np.linalg.eig(cov_xy)
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
-        width, height = 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)
         
         ellipse = Ellipse((gmr_right_x[idx], gmr_right_y[idx]), 
                          width, height, angle=angle,
@@ -841,7 +940,7 @@ def plot_position_trajectories_xy(trajectories_fr1, mu_generated, sigma_generate
         cov_xy = sigma_generated[idx][[5, 6], :][:, [5, 6]]
         eigenvalues, eigenvectors = np.linalg.eig(cov_xy)
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
-        width, height = 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)
         
         ellipse = Ellipse((gmr_left_x[idx], gmr_left_y[idx]), 
                          width, height, angle=angle,
@@ -913,7 +1012,7 @@ def plot_velocity_trajectories_vxvy(trajectories_fr1, mu_generated, sigma_genera
         cov_vxvy = sigma_generated[idx][[2, 3], :][:, [2, 3]]
         eigenvalues, eigenvectors = np.linalg.eig(cov_vxvy)
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
-        width, height = 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)
         
         ellipse = Ellipse((gmr_right_vx[idx], gmr_right_vy[idx]), 
                          width, height, angle=angle,
@@ -964,7 +1063,7 @@ def plot_velocity_trajectories_vxvy(trajectories_fr1, mu_generated, sigma_genera
         cov_vxvy = sigma_generated[idx][[7, 8], :][:, [7, 8]]
         eigenvalues, eigenvectors = np.linalg.eig(cov_vxvy)
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
-        width, height = 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)
         
         ellipse = Ellipse((gmr_left_vx[idx], gmr_left_vy[idx]), 
                          width, height, angle=angle,
@@ -1042,7 +1141,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
         
         # Draw ellipse at 2 standard deviations
-        width, height = 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)
         
         ellipse = Ellipse(mean_xy, width, height, angle=angle,
                          facecolor=colors[k], alpha=0.3, 
@@ -1063,7 +1162,6 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
     
     # Add legend info
     prior_text = f"Prior weights: [{', '.join([f'{p:.2f}' for p in best_model.priors[:5]])}...]"
-    prior_text = ""
     ax.text(0.02, 0.98, prior_text, transform=ax.transAxes,
            fontsize=9, verticalalignment='top',
            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
@@ -1075,7 +1173,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
     for i, traj in enumerate(trajectories_fr1):
         left_x = traj[:, 5]
         left_y = traj[:, 6]
-        ax.plot(left_x, left_y, '-', color='lightgray', alpha=0.5, linewidth=1)
+        ax.plot(left_x, left_y, '-', color='lightgray', alpha=0.2, linewidth=1)
     
     # Plot each Gaussian component
     for k in range(K):
@@ -1096,7 +1194,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
         
         # Draw ellipse at 2 standard deviations
-        width, height = 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)
         
         ellipse = Ellipse(mean_xy, width, height, angle=angle,
                          facecolor=colors[k], alpha=0.3, 
@@ -1176,7 +1274,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
         
         # Draw ellipse at 2 standard deviations
-        width, height = 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)
         
         ellipse = Ellipse(mean_vxvy, width, height, angle=angle,
                          facecolor=colors[k], alpha=0.3, 
@@ -1201,7 +1299,6 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
     
     # Add legend info
     prior_text = f"Prior weights: [{', '.join([f'{p:.2f}' for p in best_model.priors[:5]])}...]"
-    prior_text = ""
     ax.text(0.02, 0.98, prior_text, transform=ax.transAxes,
            fontsize=9, verticalalignment='top',
            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
@@ -1213,7 +1310,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
     for i, traj in enumerate(trajectories_fr1):
         left_vx = traj[:, 7]
         left_vy = traj[:, 8]
-        ax.plot(left_vx, left_vy, '-', color='lightgray', alpha=0.5, linewidth=1)
+        ax.plot(left_vx, left_vy, '-', color='lightgray', alpha=0.2, linewidth=1)
     
     # Plot each Gaussian component
     for k in range(K):
@@ -1234,7 +1331,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
         
         # Draw ellipse at 2 standard deviations
-        width, height = 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)
         
         ellipse = Ellipse(mean_vxvy, width, height, angle=angle,
                          facecolor=colors[k], alpha=0.3, 
@@ -1306,7 +1403,7 @@ def visualize_results(time_query, mu_generated, sigma_generated, trajectories_fr
         
         axes[dim].plot(time_flat, mu, 'r-', linewidth=2, label='GMR Generated')
         axes[dim].fill_between(time_flat, mu - std, mu + std, 
-                               color='red', alpha=0.2,label='±1σ Uncertainty')
+                               color='red', alpha=0.2, label='±1σ Uncertainty')
         
         axes[dim].set_xlabel('Normalized Time', fontsize=11)
         axes[dim].set_ylabel(feature_names[dim], fontsize=11)
@@ -1326,9 +1423,9 @@ def visualize_results(time_query, mu_generated, sigma_generated, trajectories_fr
     plt.show()
 
 
-def main(data_path, subsample_factor=10, n_jobs=-1):
+def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True):
     """
-    Main analysis pipeline with OPTIMIZATIONS (11 DIMENSIONS)
+    Main analysis pipeline with OPTIMIZATIONS (11 DIMENSIONS, 3 FRAMES)
     
     Parameters:
     -----------
@@ -1337,10 +1434,12 @@ def main(data_path, subsample_factor=10, n_jobs=-1):
     subsample_factor : int
         Subsampling factor (default: 10)
     n_jobs : int
-        Number of parallel jobs (-1 = all cores)
+        Number of parallel jobs (-1 = all cores, only used if use_parallel=True)
+    use_parallel : bool
+        If True, use parallel training (fast). If False, use sequential training (slower but easier to debug)
     """
     print("\n" + "="*70)
-    print("OPTIMIZED GAIT ANALYSIS USING TPGMM (11 DIMENSIONS)")
+    print("OPTIMIZED GAIT ANALYSIS USING TPGMM (11 DIMENSIONS, 3 FRAMES)")
     print("="*70)
     
     # Create output folder based on script name
@@ -1365,13 +1464,17 @@ def main(data_path, subsample_factor=10, n_jobs=-1):
     print("  [7-8]: Left ankle velocity (x, y)")
     print("  [9]:   Left ankle angle")
     print("  [10]:  Time (normalized)")
+    print("\nFRAMES: FR1, FR2, FR3")
     print("\nOPTIMIZATIONS ENABLED:")
     print("  ✓ Vectorized E-step (10-20x faster)")
-    print("  ✓ Parallel model selection (uses all CPU cores)")
+    if use_parallel:
+        print(f"  ✓ Parallel model selection (uses all CPU cores)")
+        print(f"  ✓ CPU cores: {n_jobs if n_jobs > 0 else 'all'}")
+    else:
+        print("  ⚠ Sequential model selection (one at a time)")
     print("  ✓ Cached inverse covariances")
     print("  ✓ Efficient matrix operations")
     print(f"  ✓ Subsampling: {subsample_factor}x")
-    print(f"  ✓ CPU cores: {n_jobs if n_jobs > 0 else 'all'}")
     print("="*70)
     
     overall_start = time.time()
@@ -1379,23 +1482,31 @@ def main(data_path, subsample_factor=10, n_jobs=-1):
     # Load data
     data = load_gait_data(data_path)
     
-    # Extract trajectories (now with 11 dimensions)
-    trajectories_fr1, trajectories_fr2 = extract_trajectories(data, subsample_factor)
-       
-    # Prepare TPGMM data
-    X_frames = prepare_tpgmm_data(trajectories_fr1, trajectories_fr2)
+    # Extract trajectories (now with 3 frames)
+    trajectories_fr1, trajectories_fr2, trajectories_fr3 = extract_trajectories(data, subsample_factor)
     
-    # Train with PARALLEL BIC selection
-    best_model, results = train_tpgmm_parallel(
-        X_frames, 
-        component_range=range(3, 31),
-        n_jobs=n_jobs
-    )
+    # Prepare TPGMM data (3 frames)
+    X_frames = prepare_tpgmm_data(trajectories_fr1, trajectories_fr2, trajectories_fr3)
+    
+    # Train with BIC selection (parallel or sequential)
+    if use_parallel:
+        # PARALLEL training - uses all CPU cores
+        best_model, results = train_tpgmm_parallel(
+            X_frames, 
+            component_range=range(3, 31, 1),
+            n_jobs=n_jobs
+        )
+    else:
+        # SEQUENTIAL training - one model at a time
+        best_model, results = train_tpgmm_sequential(
+            X_frames, 
+            component_range=range(3, 31, 1),
+        )
     
     # Visualize BIC results
     visualize_bic_results(results)
     
-    # Generate trajectory with GMR
+    # Generate trajectory with GMR (3 frames)
     time_query, mu_generated, sigma_generated = generate_trajectory_with_gmr(
         best_model, trajectories_fr1
     )
@@ -1421,7 +1532,8 @@ def main(data_path, subsample_factor=10, n_jobs=-1):
     print("OPTIMIZED ANALYSIS COMPLETE!")
     print("="*70)
     print(f"✓ Best model: K = {best_model.K} components")
-    print(f"✓ Frames used: 2 (FR1, FR2)")
+    print(f"✓ Frames used: 3 (FR1, FR2, FR3)")
+    print(f"✓ Training mode: {'PARALLEL' if use_parallel else 'SEQUENTIAL'}")
     print(f"✓ BIC: {results['bic'][np.argmin(results['bic'])]:.2f}")
     print(f"✓ Total execution time: {overall_time:.2f} seconds")
     print(f"✓ Dimensions: 11 (10 features + time)")
@@ -1443,7 +1555,14 @@ if __name__ == "__main__":
     # Configuration
     data_path = "TaskPaGMMM\\examples\\7days1\\gait_analysis_export_subject35v4.json"
     subsample_factor = 1  # Adjust as needed
-    n_jobs = -1  # Use all CPU cores
+    n_jobs = -1  # Use all CPU cores (only used if use_parallel=True)
+    
+    # ============================================================
+    # TRAINING MODE SELECTION
+    # ============================================================
+    use_parallel = True   # True = PARALLEL (fast, ~2-3 min)
+                          # False = SEQUENTIAL (slow, ~15-20 min, easier to debug)
+    # ============================================================
     
     # Check if file exists
     if not os.path.exists(data_path):
@@ -1451,9 +1570,10 @@ if __name__ == "__main__":
         print("Please update the data_path variable.")
         sys.exit(1)
     
-    # Run optimized analysis with 11 dimensions
+    # Run optimized analysis with 11 dimensions and 3 frames
     model, results, mu_gen, sigma_gen = main(
         data_path, 
         subsample_factor=subsample_factor,
-        n_jobs=n_jobs
+        n_jobs=n_jobs,
+        use_parallel=use_parallel
     )
