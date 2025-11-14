@@ -445,7 +445,7 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajector
     
     # 2. Plot baseline GMR trajectory (thick black line)
     axes[0].plot(baseline_gmr[:, 0], baseline_gmr[:, 1], 
-                'k-', linewidth=3.0, label='Baseline GMR (no adaptation)',
+                'k-', linewidth=2.0, label='Baseline GMR (no adaptation)',
                 zorder=5, alpha=0.8)
     
     # Mark start and end of baseline
@@ -466,7 +466,12 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajector
         else:
             label = None
         
-        axes[0].plot(adapted_traj[:, 0], adapted_traj[:, 1],
+        # Calculate displacement from baseline's mean position and anti-transform
+        baseline_mean = np.mean(baseline_gmr[:, 0:2], axis=0)
+        adapted_mean = np.mean(adapted_traj[:, 0:2], axis=0)
+        displacement = adapted_mean - baseline_mean
+        
+        axes[0].plot(adapted_traj[:, 0] - displacement[0], adapted_traj[:, 1] - displacement[1],
                    color=color, linewidth=2.0, alpha=0.7,
                    label=label, zorder=4)
     
@@ -493,7 +498,7 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajector
     
     # 2. Plot baseline GMR trajectory
     axes[1].plot(baseline_gmr[:, 5], baseline_gmr[:, 6], 
-                'k-', linewidth=3.0, label='Baseline GMR (no adaptation)',
+                'k-', linewidth=2.0, label='Baseline GMR (no adaptation)',
                 zorder=5, alpha=0.8)
     
     # Mark start and end
@@ -513,7 +518,12 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajector
         else:
             label = None
         
-        axes[1].plot(adapted_traj[:, 5], adapted_traj[:, 6],
+        # Calculate displacement from baseline's mean position and anti-transform
+        baseline_mean = np.mean(baseline_gmr[:, 5:7], axis=0)
+        adapted_mean = np.mean(adapted_traj[:, 5:7], axis=0)
+        displacement = adapted_mean - baseline_mean
+        
+        axes[1].plot(adapted_traj[:, 5] - displacement[0], adapted_traj[:, 6] - displacement[1],
                    color=color, linewidth=2.0, alpha=0.7,
                    label=label, zorder=4)
     
@@ -608,7 +618,12 @@ def plot_adaptation_test_y(baseline_frame_trajs, baseline_gmr, adapted_trajector
         else:
             label = None
         
-        axes[0].plot(adapted_traj[:, 0], adapted_traj[:, 1],
+        # Calculate displacement from baseline's mean position and anti-transform
+        baseline_mean = np.mean(baseline_gmr[:, 0:2], axis=0)
+        adapted_mean = np.mean(adapted_traj[:, 0:2], axis=0)
+        displacement = adapted_mean - baseline_mean
+        
+        axes[0].plot(adapted_traj[:, 0] - displacement[0], adapted_traj[:, 1] - displacement[1],
                    color=color, linewidth=2.0, alpha=0.7,
                    label=label, zorder=4)
     
@@ -655,7 +670,12 @@ def plot_adaptation_test_y(baseline_frame_trajs, baseline_gmr, adapted_trajector
         else:
             label = None
         
-        axes[1].plot(adapted_traj[:, 5], adapted_traj[:, 6],
+        # Calculate displacement from baseline's mean position and anti-transform
+        baseline_mean = np.mean(baseline_gmr[:, 5:7], axis=0)
+        adapted_mean = np.mean(adapted_traj[:, 5:7], axis=0)
+        displacement = adapted_mean - baseline_mean
+        
+        axes[1].plot(adapted_traj[:, 5] - displacement[0], adapted_traj[:, 6] - displacement[1],
                    color=color, linewidth=2.0, alpha=0.7,
                    label=label, zorder=4)
     
