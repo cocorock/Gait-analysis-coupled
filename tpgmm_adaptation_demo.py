@@ -68,14 +68,98 @@ class OptimizedTPGMM:
 
 class OptimizedGMR:
     """Optimized GMR for TPGMM with task parameters"""
-    def __init__(self, tpgmm_model):
+    def __init__(self, tpgmm_model, reference_frame=None):
+        """
+        Initialize GMR
+        
+        Parameters:
+        -----------
+        tpgmm_model : OptimizedTPGMM
+            Trained TPGMM model
+        reference_frame : int or None
+            Which frame to use as reference for trajectory generation:
+            - None: Use product of all frames (global averaging)
+            - 0: Generate in FR1 (Hip frame)
+            - 1: Generate in FR2 (Right foot frame)
+            - 2: Generate in FR3 (Left foot frame)
+        """
         self.model = tpgmm_model
         self.K = tpgmm_model.K
         self.P = tpgmm_model.P
         self.D = tpgmm_model.D
+        self.reference_frame = reference_frame
     
     def predict(self, X_query, input_dims, output_dims, A_frames, b_frames):
         """GMR prediction with task parameters"""
+        n_query = X_query.shape[0]
+        n_out = len(output_dims)
+        
+        if self.reference_frame is not None:
+            # Use ONLY the specified reference frame
+            return self._predict_single_frame(X_query, input_dims, output_dims, 
+                                             A_frames, b_frames, self.reference_frame)
+        else:
+            # Use product of all frames (original behavior)
+            return self._predict_product_frames(X_query, input_dims, output_dims, 
+                                               A_frames, b_frames)
+    
+    def _predict_single_frame(self, X_query, input_dims, output_dims, A_frames, b_frames, frame_idx):
+        """Generate trajectory using ONLY the specified frame"""
+        n_query = X_query.shape[0]
+        n_out = len(output_dims)
+        
+        # Use only the specified frame
+        A = A_frames[frame_idx]
+        b = b_frames[frame_idx]
+        
+        # Transform Gaussians to global frame
+        mu_global = np.zeros((self.K, self.D))
+        Sigma_global = np.zeros((self.K, self.D, self.D))
+        
+        for k in range(self.K):
+            mu_global[k] = A @ self.model.means[frame_idx, k] + b
+            Sigma_global[k] = A @ self.model.covars[frame_idx, k] @ A.T
+        
+        # GMR for each query point
+        mu_out = np.zeros((n_query, n_out))
+        sigma_out = np.zeros((n_query, n_out, n_out))
+        
+        for t in range(n_query):
+            x_in = X_query[t]
+            
+            # Compute responsibilities
+            h = np.zeros(self.K)
+            for k in range(self.K):
+                mu_in = mu_global[k][input_dims]
+                Sigma_in = Sigma_global[k][np.ix_(input_dims, input_dims)]
+                Sigma_in_inv = np.linalg.inv(Sigma_in)
+                diff = x_in - mu_in
+                h[k] = self.model.priors[k] * np.exp(-0.5 * diff @ Sigma_in_inv @ diff)
+            
+            h = h / (np.sum(h) + 1e-10)
+            
+            # Conditional distribution
+            for k in range(self.K):
+                mu_k = mu_global[k]
+                Sigma_k = Sigma_global[k]
+                
+                Sigma_in = Sigma_k[np.ix_(input_dims, input_dims)]
+                Sigma_out_in = Sigma_k[np.ix_(output_dims, input_dims)]
+                Sigma_out_out = Sigma_k[np.ix_(output_dims, output_dims)]
+                Sigma_in_inv = np.linalg.inv(Sigma_in)
+                
+                mu_out_k = mu_k[output_dims] + Sigma_out_in @ Sigma_in_inv @ (x_in - mu_k[input_dims])
+                Sigma_out_k = Sigma_out_out - Sigma_out_in @ Sigma_in_inv @ Sigma_out_in.T
+                
+                mu_out[t] += h[k] * mu_out_k
+                sigma_out[t] += h[k] * (Sigma_out_k + np.outer(mu_out_k, mu_out_k))
+            
+            sigma_out[t] -= np.outer(mu_out[t], mu_out[t])
+        
+        return mu_out, sigma_out
+    
+    def _predict_product_frames(self, X_query, input_dims, output_dims, A_frames, b_frames):
+        """Generate trajectory using product of all frames (original method)"""
         n_query = X_query.shape[0]
         n_out = len(output_dims)
         
@@ -208,7 +292,7 @@ def create_transformation_matrix_2d(tx, ty, theta):
     return A, b
 
 
-def generate_adapted_trajectory(model, A_frames, b_frames, n_query=200):
+def generate_adapted_trajectory(model, A_frames, b_frames, n_query=200, reference_frame=None):
     """
     Generate trajectory with given task parameters
     
@@ -222,6 +306,12 @@ def generate_adapted_trajectory(model, A_frames, b_frames, n_query=200):
         Translation vectors for each frame [b_FR1, b_FR2, b_FR3]
     n_query : int
         Number of query points
+    reference_frame : int or None
+        Which frame to use as reference:
+        - None: Product of all frames (global)
+        - 0: FR1 (Hip frame)
+        - 1: FR2 (Right foot frame) - RECOMMENDED FOR FR2 ADAPTATION DEMO
+        - 2: FR3 (Left foot frame)
         
     Returns:
     --------
@@ -231,7 +321,7 @@ def generate_adapted_trajectory(model, A_frames, b_frames, n_query=200):
         Covariance matrices
     """
     time_query = np.linspace(0, 1, n_query).reshape(-1, 1)
-    gmr = OptimizedGMR(model)
+    gmr = OptimizedGMR(model, reference_frame=reference_frame)
     
     input_dims = [10]  # Time
     output_dims = list(range(10))  # All other dimensions
@@ -282,10 +372,18 @@ def compute_trajectory_metrics(trajectory):
     return metrics
 
 
-def test_horizontal_variation(model, output_folder, baseline_frames):
-    """Test horizontal position variations of FR2"""
+def test_horizontal_variation(model, output_folder, baseline_frames, reference_frame=1):
+    """
+    Test horizontal position variations of FR2
+    
+    Parameters:
+    -----------
+    reference_frame : int
+        Frame to use as reference (1 = FR2 for right foot adaptation demo)
+    """
     print("\n" + "="*70)
     print("TEST 1: HORIZONTAL POSITION VARIATION (FR2)")
+    print(f"Reference Frame: FR{reference_frame+1} ({'Hip' if reference_frame==0 else 'Right Foot' if reference_frame==1 else 'Left Foot'})")
     print("="*70)
     
     # Define horizontal shifts
@@ -300,7 +398,8 @@ def test_horizontal_variation(model, output_folder, baseline_frames):
         A_frames = [baseline_frames[0][0], A_FR2, baseline_frames[2][0]]
         b_frames = [baseline_frames[0][1], b_FR2, baseline_frames[2][1]]
         
-        mu, sigma = generate_adapted_trajectory(model, A_frames, b_frames)
+        mu, sigma = generate_adapted_trajectory(model, A_frames, b_frames, 
+                                               reference_frame=reference_frame)
         trajectories.append((mu, sigma))
         metrics_list.append(compute_trajectory_metrics(mu))
         
@@ -313,10 +412,18 @@ def test_horizontal_variation(model, output_folder, baseline_frames):
     return trajectories, metrics_list, x_shifts
 
 
-def test_vertical_variation(model, output_folder, baseline_frames):
-    """Test vertical position variations of FR2"""
+def test_vertical_variation(model, output_folder, baseline_frames, reference_frame=1):
+    """
+    Test vertical position variations of FR2
+    
+    Parameters:
+    -----------
+    reference_frame : int
+        Frame to use as reference (1 = FR2 for right foot adaptation demo)
+    """
     print("\n" + "="*70)
     print("TEST 2: VERTICAL POSITION VARIATION (FR2)")
+    print(f"Reference Frame: FR{reference_frame+1} ({'Hip' if reference_frame==0 else 'Right Foot' if reference_frame==1 else 'Left Foot'})")
     print("="*70)
     
     # Define vertical shifts
@@ -331,7 +438,8 @@ def test_vertical_variation(model, output_folder, baseline_frames):
         A_frames = [baseline_frames[0][0], A_FR2, baseline_frames[2][0]]
         b_frames = [baseline_frames[0][1], b_FR2, baseline_frames[2][1]]
         
-        mu, sigma = generate_adapted_trajectory(model, A_frames, b_frames)
+        mu, sigma = generate_adapted_trajectory(model, A_frames, b_frames,
+                                               reference_frame=reference_frame)
         trajectories.append((mu, sigma))
         metrics_list.append(compute_trajectory_metrics(mu))
         
@@ -344,10 +452,18 @@ def test_vertical_variation(model, output_folder, baseline_frames):
     return trajectories, metrics_list, y_shifts
 
 
-def test_orientation_variation(model, output_folder, baseline_frames):
-    """Test orientation variations of FR2"""
+def test_orientation_variation(model, output_folder, baseline_frames, reference_frame=1):
+    """
+    Test orientation variations of FR2
+    
+    Parameters:
+    -----------
+    reference_frame : int
+        Frame to use as reference (1 = FR2 for right foot adaptation demo)
+    """
     print("\n" + "="*70)
     print("TEST 3: ORIENTATION VARIATION (FR2)")
+    print(f"Reference Frame: FR{reference_frame+1} ({'Hip' if reference_frame==0 else 'Right Foot' if reference_frame==1 else 'Left Foot'})")
     print("="*70)
     
     # Define rotation angles (±15 degrees)
@@ -363,7 +479,8 @@ def test_orientation_variation(model, output_folder, baseline_frames):
         A_frames = [baseline_frames[0][0], A_FR2, baseline_frames[2][0]]
         b_frames = [baseline_frames[0][1], b_FR2, baseline_frames[2][1]]
         
-        mu, sigma = generate_adapted_trajectory(model, A_frames, b_frames)
+        mu, sigma = generate_adapted_trajectory(model, A_frames, b_frames,
+                                               reference_frame=reference_frame)
         trajectories.append((mu, sigma))
         metrics_list.append(compute_trajectory_metrics(mu))
         
@@ -376,10 +493,18 @@ def test_orientation_variation(model, output_folder, baseline_frames):
     return trajectories, metrics_list, angles_deg
 
 
-def test_combined_variation(model, output_folder, baseline_frames):
-    """Test combined position and orientation variations"""
+def test_combined_variation(model, output_folder, baseline_frames, reference_frame=1):
+    """
+    Test combined position and orientation variations
+    
+    Parameters:
+    -----------
+    reference_frame : int
+        Frame to use as reference (1 = FR2 for right foot adaptation demo)
+    """
     print("\n" + "="*70)
     print("TEST 4: COMBINED POSITION + ORIENTATION VARIATION (FR2)")
+    print(f"Reference Frame: FR{reference_frame+1} ({'Hip' if reference_frame==0 else 'Right Foot' if reference_frame==1 else 'Left Foot'})")
     print("="*70)
     
     # Define grid
@@ -396,7 +521,8 @@ def test_combined_variation(model, output_folder, baseline_frames):
             A_frames = [baseline_frames[0][0], A_FR2, baseline_frames[2][0]]
             b_frames = [baseline_frames[0][1], b_FR2, baseline_frames[2][1]]
             
-            mu, sigma = generate_adapted_trajectory(model, A_frames, b_frames)
+            mu, sigma = generate_adapted_trajectory(model, A_frames, b_frames,
+                                                   reference_frame=reference_frame)
             row.append((mu, sigma))
             print(f"  dx = {dx:+.2f}m, θ = {angle_deg:+.1f}°")
         
@@ -701,7 +827,7 @@ def plot_metrics_vs_orientation(metrics_list, angles, output_folder):
     plt.close()
 
 
-def main(model_folder=None, reg_factor=5e-4):
+def main(model_folder=None, reg_factor=5e-4, reference_frame=1):
     """
     Main adaptation demonstration pipeline
     
@@ -711,12 +837,19 @@ def main(model_folder=None, reg_factor=5e-4):
         Path to model folder
     reg_factor : float
         Regularization factor for auto-constructing path
+    reference_frame : int
+        Which frame to use as reference for trajectory generation:
+        - 0: FR1 (Hip frame)
+        - 1: FR2 (Right foot frame) - DEFAULT and RECOMMENDED
+        - 2: FR3 (Left foot frame)
+        - None: Product of all frames (global averaging)
     """
     print("\n" + "="*70)
     print("TPGMM ADAPTATION DEMONSTRATION")
     print("="*70)
     print("Testing trajectory adaptation to task parameter variations")
     print("Target: FR2 (Right Foot Frame)")
+    print(f"Reference Frame: FR{reference_frame+1} ({'Hip' if reference_frame==0 else 'Right Foot' if reference_frame==1 else 'Left Foot' if reference_frame==2 else 'Global Average'})")
     print("  - Horizontal position: ±0.2m")
     print("  - Vertical position: ±0.1m")
     print("  - Orientation: ±15°")
@@ -754,16 +887,24 @@ def main(model_folder=None, reg_factor=5e-4):
     print("="*70)
     
     # Test 1: Horizontal variation
-    h_traj, h_metrics, h_shifts = test_horizontal_variation(model, output_folder, baseline_frames)
+    h_traj, h_metrics, h_shifts = test_horizontal_variation(
+        model, output_folder, baseline_frames, reference_frame=reference_frame
+    )
     
     # Test 2: Vertical variation
-    v_traj, v_metrics, v_shifts = test_vertical_variation(model, output_folder, baseline_frames)
+    v_traj, v_metrics, v_shifts = test_vertical_variation(
+        model, output_folder, baseline_frames, reference_frame=reference_frame
+    )
     
     # Test 3: Orientation variation
-    o_traj, o_metrics, o_angles = test_orientation_variation(model, output_folder, baseline_frames)
+    o_traj, o_metrics, o_angles = test_orientation_variation(
+        model, output_folder, baseline_frames, reference_frame=reference_frame
+    )
     
     # Test 4: Combined variation
-    combined_traj = test_combined_variation(model, output_folder, baseline_frames)
+    combined_traj = test_combined_variation(
+        model, output_folder, baseline_frames, reference_frame=reference_frame
+    )
     
     print("\n" + "="*70)
     print("ADAPTATION DEMONSTRATION COMPLETE!")
@@ -785,11 +926,36 @@ if __name__ == "__main__":
     print("TPGMM ADAPTATION DEMONSTRATION SCRIPT")
     print("="*70)
     
-    # Configuration
-    reg_factor = 5e-4
+    # ============================================================
+    # CONFIGURATION
+    # ============================================================
+    reg_factor = 1e-4
     model_folder = None  # Auto-construct from reg_factor
     
+    # Reference frame selection:
+    # - 0: FR1 (Hip frame) - Generates trajectories in hip-centered coordinates
+    # - 1: FR2 (Right foot frame) - RECOMMENDED for FR2 adaptation demo
+    # - 2: FR3 (Left foot frame) - Generates in left foot coordinates
+    # - None: Global averaging across all frames
+    reference_frame = 1  # Use FR2 (Right foot frame)
+    
+    print(f"Configuration:")
+    print(f"  Regularization factor: {reg_factor}")
+    print(f"  Reference frame: FR{reference_frame+1} (Right Foot)")
+    print(f"  -> Trajectories will be generated in FR2 coordinate system")
+    print()
+    # ============================================================
+    
     # Run demonstration
-    main(model_folder=model_folder, reg_factor=reg_factor)
+    main(model_folder=model_folder, reg_factor=reg_factor, reference_frame=reference_frame)
     
     print("\n✅ Demonstration complete!")
+    print("\n" + "="*70)
+    print("USAGE NOTES:")
+    print("="*70)
+    print("To change the reference frame, modify 'reference_frame' parameter:")
+    print("  reference_frame = 0  # FR1 (Hip frame)")
+    print("  reference_frame = 1  # FR2 (Right foot) - DEFAULT")
+    print("  reference_frame = 2  # FR3 (Left foot)")
+    print("  reference_frame = None  # Global average")
+    print("="*70)
