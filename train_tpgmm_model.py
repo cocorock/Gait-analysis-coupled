@@ -1,25 +1,27 @@
 """
-OPTIMIZED: Gait Analysis using Task-Parameterized Gaussian Mixture Models (TPGMM)
-Following the structure of gait_example_modifiedV2.ipynb
+TPGMM MODEL TRAINING SCRIPT
+Train Task-Parameterized Gaussian Mixture Model and save for later use
 
-MODIFIED VERSION: Now includes ALL 11 dimensions:
-- right_ankle_pos (x, y) from right_leg_kinematics
-- right_ankle_vel (x, y) from right_leg_kinematics
-- ankle_right_deg
-- left_ankle_pos (x, y) from left_leg_kinematics
-- left_ankle_vel (x, y) from left_leg_kinematics
-- ankle_left_deg
-- time
+This script:
+1. Loads gait data from JSON
+2. Extracts trajectories from 3 reference frames:
+   - FR1: Hip-centered (general frame)
+   - FR2: Right foot target frame
+   - FR3: Left foot target frame
+3. Trains TPGMM model with BIC optimization
+4. Saves trained model to PKL file
+5. Generates and saves training-related figures:
+   - BIC model selection plot
+   - Gaussian components (positions)
+   - Gaussian components (velocities)
 
-PERFORMANCE OPTIMIZATIONS:
-1. Vectorized E-step (10-20x faster)
-2. Parallel BIC model selection (uses all CPU cores)
-3. Cached computations (inverse covariances, log-determinants)
-4. NumPy broadcasting and einsum
-5. Efficient log-space operations
+Output:
+- models/<folder_name>/trained_model.pkl
+- models/<folder_name>/bic_model_selection_11dims.png
+- models/<folder_name>/gaussian_components_position.png
+- models/<folder_name>/gaussian_components_velocity.png
 
-This optimized version should achieve speeds comparable to RobinU434 library
-while maintaining BIC selection and notebook structure.
+GMR trajectory generation is done separately in apply_gmr_generate_trajectories.py
 """
 
 import numpy as np
@@ -27,6 +29,7 @@ import matplotlib.pyplot as plt
 import json
 import sys
 import os
+import pickle
 from scipy.special import logsumexp
 from scipy.linalg import cholesky, solve_triangular
 from sklearn.cluster import KMeans
@@ -63,7 +66,7 @@ class OptimizedTPGMM:
     - Numerical stability with log-space operations
     """
     
-    def __init__(self, n_components, n_frames, n_features, reg_factor=1e-4, 
+    def __init__(self, n_components, n_frames, n_features, reg_factor=1e-5, 
                  max_iter=100, tol=1e-4, verbose=True):
         """Initialize Optimized TPGMM model"""
         self.K = n_components
@@ -419,7 +422,7 @@ class OptimizedGMR:
         return mu_out, sigma_out
 
 
-def train_single_model(K, X_frames, reg_factor=1e-4, verbose=False):
+def train_single_model(K, X_frames, reg_factor=1e-5, verbose=False):
     """Train a single TPGMM model (for parallel execution)"""
     n_frames = X_frames.shape[0]
     n_features = X_frames.shape[2]
@@ -440,7 +443,7 @@ def train_single_model(K, X_frames, reg_factor=1e-4, verbose=False):
     return K, model, bic, log_likelihood
 
 
-def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_factor=1e-3):
+def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_factor=1e-5):
     """
     Train multiple TPGMM models IN PARALLEL and select best via BIC
     
@@ -488,7 +491,7 @@ def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_
     return best_model, results_dict
 
 
-def train_tpgmm_sequential(X_frames, component_range=range(3, 21), reg_factor=1e-4):
+def train_tpgmm_sequential(X_frames, component_range=range(3, 21), reg_factor=1e-5):
     """
     Train multiple TPGMM models SEQUENTIALLY and select best via BIC
     
@@ -1120,7 +1123,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
     for i, traj in enumerate(trajectories_fr1):
         right_x = traj[:, 0]
         right_y = traj[:, 1]
-        ax.plot(right_x, right_y, '-', color='lightgray', alpha=0.5, linewidth=1)
+        ax.plot(right_x, right_y, '-', color='lightgray', alpha=0.2, linewidth=1)
     
     # Plot each Gaussian component
     for k in range(K):
@@ -1253,7 +1256,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
     for i, traj in enumerate(trajectories_fr1):
         right_vx = traj[:, 2]
         right_vy = traj[:, 3]
-        ax.plot(right_vx, right_vy, '-', color='lightgray', alpha=0.5, linewidth=1)
+        ax.plot(right_vx, right_vy, '-', color='lightgray', alpha=0.2, linewidth=1)
     
     # Plot each Gaussian component
     for k in range(K):
@@ -1423,7 +1426,7 @@ def visualize_results(time_query, mu_generated, sigma_generated, trajectories_fr
     plt.show()
 
 
-def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True):
+def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True, reg_factor=1e-5):
     """
     Main analysis pipeline with OPTIMIZATIONS (11 DIMENSIONS, 3 FRAMES)
     
@@ -1437,14 +1440,18 @@ def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True):
         Number of parallel jobs (-1 = all cores, only used if use_parallel=True)
     use_parallel : bool
         If True, use parallel training (fast). If False, use sequential training (slower but easier to debug)
+    reg_factor : float
+        Regularization factor for covariance matrices (default: 1e-5)
+        Higher values = more regularization = simpler models
+        Try 1e-4 or 1e-3 if you want fewer components
     """
     print("\n" + "="*70)
-    print("OPTIMIZED GAIT ANALYSIS USING TPGMM (11 DIMENSIONS, 3 FRAMES)")
+    print("TPGMM MODEL TRAINING (11 DIMENSIONS, 3 FRAMES)")
     print("="*70)
     
-    # Create output folder based on script name
+    # Create output folder based on script name with reg_factor suffix
     script_name = os.path.splitext(os.path.basename(__file__))[0]
-    output_folder = script_name
+    output_folder = f"{script_name}_reg{reg_factor:.0e}"
     
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -1475,6 +1482,7 @@ def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True):
     print("  ✓ Cached inverse covariances")
     print("  ✓ Efficient matrix operations")
     print(f"  ✓ Subsampling: {subsample_factor}x")
+    print(f"  ✓ Regularization: {reg_factor} (covariance stability)")
     print("="*70)
     
     overall_start = time.time()
@@ -1493,32 +1501,20 @@ def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True):
         # PARALLEL training - uses all CPU cores
         best_model, results = train_tpgmm_parallel(
             X_frames, 
-            component_range=range(3, 31, 1),
-            n_jobs=n_jobs
+            component_range=range(3, 31),
+            n_jobs=n_jobs,
+            reg_factor=reg_factor
         )
     else:
         # SEQUENTIAL training - one model at a time
         best_model, results = train_tpgmm_sequential(
             X_frames, 
-            component_range=range(3, 31, 1),
+            component_range=range(3, 31),
+            reg_factor=reg_factor
         )
     
     # Visualize BIC results
     visualize_bic_results(results)
-    
-    # Generate trajectory with GMR (3 frames)
-    time_query, mu_generated, sigma_generated = generate_trajectory_with_gmr(
-        best_model, trajectories_fr1
-    )
-    
-    # Visualize results
-    visualize_results(time_query, mu_generated, sigma_generated, trajectories_fr1)
-    
-    # Visualize X-Y position trajectories
-    plot_position_trajectories_xy(trajectories_fr1, mu_generated, sigma_generated)
-    
-    # Visualize Vx-Vy velocity trajectories
-    plot_velocity_trajectories_vxvy(trajectories_fr1, mu_generated, sigma_generated)
     
     # Visualize Gaussian mixture components - Positions
     plot_gaussian_components_position(best_model, trajectories_fr1)
@@ -1526,32 +1522,68 @@ def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True):
     # Visualize Gaussian mixture components - Velocities
     plot_gaussian_components_velocity(best_model, trajectories_fr1)
     
+    # Save trained model to PKL file
+    model_filename = os.path.join(output_folder, 'trained_model.pkl')
+    model_data = {
+        'model': best_model,
+        'results': results,
+        'trajectories_fr1': trajectories_fr1,
+        'trajectories_fr2': trajectories_fr2,
+        'trajectories_fr3': trajectories_fr3,
+        'metadata': {
+            'K': best_model.K,
+            'n_frames': 3,
+            'n_features': 11,
+            'subsample_factor': subsample_factor,
+            'reg_factor': reg_factor,
+            'training_mode': 'PARALLEL' if use_parallel else 'SEQUENTIAL',
+            'n_demonstrations': trajectories_fr1.shape[0],
+            'n_timesteps': trajectories_fr1.shape[1],
+            'best_bic': results['bic'][np.argmin(results['bic'])],
+            'frame_descriptions': {
+                'FR1': 'Hip-centered (general frame)',
+                'FR2': 'Right foot target frame',
+                'FR3': 'Left foot target frame'
+            }
+        }
+    }
+    
+    with open(model_filename, 'wb') as f:
+        pickle.dump(model_data, f)
+    
     overall_time = time.time() - overall_start
     
     print("\n" + "="*70)
-    print("OPTIMIZED ANALYSIS COMPLETE!")
+    print("TPGMM MODEL TRAINING COMPLETE!")
     print("="*70)
     print(f"✓ Best model: K = {best_model.K} components")
-    print(f"✓ Frames used: 3 (FR1, FR2, FR3)")
+    print(f"✓ Frames used: 3 (FR1: Hip, FR2: Right foot, FR3: Left foot)")
     print(f"✓ Training mode: {'PARALLEL' if use_parallel else 'SEQUENTIAL'}")
     print(f"✓ BIC: {results['bic'][np.argmin(results['bic'])]:.2f}")
     print(f"✓ Total execution time: {overall_time:.2f} seconds")
     print(f"✓ Dimensions: 11 (10 features + time)")
+    print(f"✓ Demonstrations: {trajectories_fr1.shape[0]}")
     print(f"✓ Subsampling: {subsample_factor}x")
-    print(f"\n✓ All figures saved in folder: {output_folder}/")
-    print("\n✓ Generated visualizations:")
-    print(f"  1. {output_folder}/gmr_trajectory_11dims.png")
-    print(f"  2. {output_folder}/bic_model_selection_11dims.png")
-    print(f"  3. {output_folder}/ankle_position_trajectories_xy.png")
-    print(f"  4. {output_folder}/ankle_velocity_trajectories_vxvy.png")
-    print(f"  5. {output_folder}/gaussian_components_position.png")
-    print(f"  6. {output_folder}/gaussian_components_velocity.png")
+    print(f"\n✓ Model saved to: {model_filename}")
+    print(f"\n✓ All outputs saved in folder: {output_folder}/")
+    print("\n✓ Generated training visualizations:")
+    print(f"  1. {output_folder}/bic_model_selection_11dims.png")
+    print(f"  2. {output_folder}/gaussian_components_position.png")
+    print(f"  3. {output_folder}/gaussian_components_velocity.png")
+    print("\n⚠ GMR trajectory generation will be done separately.")
+    print("  Use 'apply_gmr_generate_trajectories.py' to generate trajectories.")
     print("="*70)
     
-    return best_model, results, mu_generated, sigma_generated
+    return best_model, results, output_folder
 
 
 if __name__ == "__main__":
+    print("\n" + "="*70)
+    print("TPGMM MODEL TRAINING SCRIPT")
+    print("="*70)
+    print("This script trains a TPGMM model and saves it for later use.")
+    print("Trajectory generation (GMR) is done separately.\n")
+    
     # Configuration
     data_path = "TaskPaGMMM\\examples\\7days1\\gait_analysis_export_subject35v4.json"
     subsample_factor = 1  # Adjust as needed
@@ -1564,16 +1596,29 @@ if __name__ == "__main__":
                           # False = SEQUENTIAL (slow, ~15-20 min, easier to debug)
     # ============================================================
     
+    # ============================================================
+    # REGULARIZATION FACTOR (for covariance matrices)
+    # ============================================================
+    reg_factor = 5e-4     # Default: 1e-5 (minimal regularization)
+                          # 1e-4 = moderate (slightly fewer components)
+                          # 1e-3 = strong (significantly fewer components)
+                          # Higher values make covariances more stable but less flexible
+    # ============================================================
+    
     # Check if file exists
     if not os.path.exists(data_path):
         print(f"Error: Data file not found: {data_path}")
         print("Please update the data_path variable.")
         sys.exit(1)
     
-    # Run optimized analysis with 11 dimensions and 3 frames
-    model, results, mu_gen, sigma_gen = main(
+    # Run TPGMM training
+    model, results, output_folder = main(
         data_path, 
         subsample_factor=subsample_factor,
         n_jobs=n_jobs,
-        use_parallel=use_parallel
+        use_parallel=use_parallel,
+        reg_factor=reg_factor
     )
+    
+    print(f"\n✅ Training complete! Model saved in: {output_folder}/")
+    print(f"✅ Use 'apply_gmr_generate_trajectories.py' to generate trajectories.")
