@@ -440,7 +440,7 @@ def train_single_model(K, X_frames, reg_factor=1e-4, verbose=False):
     return K, model, bic, log_likelihood
 
 
-def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_factor=1e-3):
+def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_factor=1e-4):
     """
     Train multiple TPGMM models IN PARALLEL and select best via BIC
     

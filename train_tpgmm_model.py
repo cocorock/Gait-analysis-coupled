@@ -895,7 +895,7 @@ def plot_position_trajectories_xy(trajectories_fr1, mu_generated, sigma_generate
         cov_xy = sigma_generated[idx][[0, 1], :][:, [0, 1]]
         eigenvalues, eigenvectors = np.linalg.eig(cov_xy)
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
-        width, height = 2 * 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues) 
         
         ellipse = Ellipse((gmr_right_x[idx], gmr_right_y[idx]), 
                          width, height, angle=angle,
@@ -943,7 +943,7 @@ def plot_position_trajectories_xy(trajectories_fr1, mu_generated, sigma_generate
         cov_xy = sigma_generated[idx][[5, 6], :][:, [5, 6]]
         eigenvalues, eigenvectors = np.linalg.eig(cov_xy)
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
-        width, height = 2 * 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 *  np.sqrt(eigenvalues)  #2 * 2
         
         ellipse = Ellipse((gmr_left_x[idx], gmr_left_y[idx]), 
                          width, height, angle=angle,
@@ -1015,7 +1015,7 @@ def plot_velocity_trajectories_vxvy(trajectories_fr1, mu_generated, sigma_genera
         cov_vxvy = sigma_generated[idx][[2, 3], :][:, [2, 3]]
         eigenvalues, eigenvectors = np.linalg.eig(cov_vxvy)
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
-        width, height = 2 * 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)  #2 * 2
         
         ellipse = Ellipse((gmr_right_vx[idx], gmr_right_vy[idx]), 
                          width, height, angle=angle,
@@ -1066,7 +1066,7 @@ def plot_velocity_trajectories_vxvy(trajectories_fr1, mu_generated, sigma_genera
         cov_vxvy = sigma_generated[idx][[7, 8], :][:, [7, 8]]
         eigenvalues, eigenvectors = np.linalg.eig(cov_vxvy)
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
-        width, height = 2 * 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)  #2 * 2
         
         ellipse = Ellipse((gmr_left_vx[idx], gmr_left_vy[idx]), 
                          width, height, angle=angle,
@@ -1144,7 +1144,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
         
         # Draw ellipse at 2 standard deviations
-        width, height = 2 * 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)  #2 * 2
         
         ellipse = Ellipse(mean_xy, width, height, angle=angle,
                          facecolor=colors[k], alpha=0.3, 
@@ -1197,7 +1197,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
         
         # Draw ellipse at 2 standard deviations
-        width, height = 2 * 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues)  #2 * 2
         
         ellipse = Ellipse(mean_xy, width, height, angle=angle,
                          facecolor=colors[k], alpha=0.3, 
@@ -1277,7 +1277,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
         
         # Draw ellipse at 2 standard deviations
-        width, height = 2 * 2 * np.sqrt(eigenvalues)
+        width, height = 2 * 2 * np.sqrt(eigenvalues) # 2 * 2 
         
         ellipse = Ellipse(mean_vxvy, width, height, angle=angle,
                          facecolor=colors[k], alpha=0.3, 
@@ -1334,7 +1334,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
         angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
         
         # Draw ellipse at 2 standard deviations
-        width, height = 2 * 2 * np.sqrt(eigenvalues)
+        width, height =  2 * 2 * np.sqrt(eigenvalues) 
         
         ellipse = Ellipse(mean_vxvy, width, height, angle=angle,
                          facecolor=colors[k], alpha=0.3, 
@@ -1501,7 +1501,7 @@ def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True, reg_facto
         # PARALLEL training - uses all CPU cores
         best_model, results = train_tpgmm_parallel(
             X_frames, 
-            component_range=range(3, 31),
+            component_range=range(3, 25),
             n_jobs=n_jobs,
             reg_factor=reg_factor
         )
@@ -1509,7 +1509,7 @@ def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True, reg_facto
         # SEQUENTIAL training - one model at a time
         best_model, results = train_tpgmm_sequential(
             X_frames, 
-            component_range=range(3, 31),
+            component_range=range(3, 25),
             reg_factor=reg_factor
         )
     
@@ -1599,7 +1599,7 @@ if __name__ == "__main__":
     # ============================================================
     # REGULARIZATION FACTOR (for covariance matrices)
     # ============================================================
-    reg_factor = 5e-4     # Default: 1e-5 (minimal regularization)
+    reg_factor = 1e-4     # Default: 1e-5 (minimal regularization)
                           # 1e-4 = moderate (slightly fewer components)
                           # 1e-3 = strong (significantly fewer components)
                           # Higher values make covariances more stable but less flexible
