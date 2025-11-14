@@ -1,18 +1,23 @@
 """
-TPGMM ADAPTATION DEMONSTRATION - PRODUCT OF FRAMES
-===================================================
-Demonstrates TPGMM's ability to adapt trajectories using product of Gaussians
+TPGMM DEMONSTRATION - PRODUCT OF FRAMES
+========================================
+Demonstrates TPGMM's trajectory recovery using product of Gaussians
 across all 3 frames (FR1: Hip, FR2: Right Foot, FR3: Left Foot)
 
 This script:
-1. Varies FR2 orientation (±15°)
+1. Loads trained TPGMM model and demonstration trajectories
 2. Shows trajectories from each frame's perspective (FR1, FR2, FR3)
 3. Generates recovered trajectory using GMR with product of all frames
 4. Plots all trajectories together for comparison
 
 Output:
 - Single figure with 2 plots (Right Ankle, Left Ankle)
-- Each plot shows: FR1 traj, FR2 traj, FR3 traj, and GMR recovered traj
+- Each plot shows:
+  * Gray thin lines: Original 30 demonstration trajectories
+  * Blue solid: FR1 (Hip) trajectory
+  * Orange dashed: FR2 (Right Foot) trajectory
+  * Green dash-dot: FR3 (Left Foot) trajectory
+  * Red thick: GMR recovered trajectory (product of frames)
 
 Author: Victor
 Date: November 2024
@@ -305,99 +310,84 @@ def generate_trajectories_all_frames(model, A_frames, b_frames, n_query=200):
     return frame_trajs, gmr_traj, gmr_sigma
 
 
-def plot_adaptation_with_all_frames(angle_deg, frame_trajs_list, gmr_trajs_list, output_folder):
+def plot_adaptation_with_all_frames(frame_trajs_list, gmr_trajs_list, demo_trajectories, output_folder):
     """
-    Plot trajectories showing all 3 frames + GMR for each orientation
+    Plot trajectories showing all 3 frames + GMR + demonstration trajectories
     
     Parameters:
     -----------
-    angle_deg : array
-        Orientation angles tested (degrees)
     frame_trajs_list : list
-        List of frame trajectories for each angle
-        Each element is [FR1_traj, FR2_traj, FR3_traj]
-    gmr_trajs_list : list
-        List of GMR trajectories for each angle
+        Frame trajectories [FR1_traj, FR2_traj, FR3_traj]
+    gmr_trajs_list : array
+        GMR trajectory
+    demo_trajectories : list of arrays
+        Original demonstration trajectories from training data
     output_folder : str
         Where to save figures
     """
-    n_angles = len(angle_deg)
-    colors = plt.cm.twilight(np.linspace(0.2, 0.8, n_angles))
-    
     fig, axes = plt.subplots(1, 2, figsize=(18, 8))
     
     # Define frame colors
-    frame_colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # Blue, Orange, Green
+    frame_colors = ['#1f77b4', "#da6b0a", "#17b117"]  # Blue, Orange, Green
     frame_labels = ['FR1 (Hip)', 'FR2 (Right Foot)', 'FR3 (Left Foot)']
     frame_styles = ['-', '--', '-.']
     
-    # Plot for each angle
-    for i, angle in enumerate(angle_deg):
-        frame_trajs = frame_trajs_list[i]
-        gmr_traj = gmr_trajs_list[i]
-        
-        # RIGHT ANKLE (dims 0-1)
-        # Plot each frame's trajectory
-        for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
-            zip(frame_trajs, frame_colors, frame_labels, frame_styles)
-        ):
-            if i == 0:  # Only add label for first angle
-                axes[0].plot(frame_traj[:, 0], frame_traj[:, 1], 
-                           color=frame_color, linestyle=frame_style, linewidth=1.5,
-                           alpha=0.4, label=frame_label)
-            else:
-                axes[0].plot(frame_traj[:, 0], frame_traj[:, 1], 
-                           color=frame_color, linestyle=frame_style, linewidth=1.5,
-                           alpha=0.4)
-        
-        # Plot GMR trajectory (product of frames)
-        axes[0].plot(gmr_traj[:, 0], gmr_traj[:, 1], 
-                    color=colors[i], linewidth=3.0,
-                    label=f'GMR θ={angle:+.0f}°', zorder=10, alpha=0.9)
-        
-        # Mark start and end
-        axes[0].plot(gmr_traj[0, 0], gmr_traj[0, 1], 'o', 
-                    color=colors[i], markersize=10, zorder=11)
-        axes[0].plot(gmr_traj[-1, 0], gmr_traj[-1, 1], 's', 
-                    color=colors[i], markersize=10, zorder=11)
-        
-        # Draw orientation arrow
-        arrow_length = 0.05
-        dx = arrow_length * np.cos(np.deg2rad(angle))
-        dy = arrow_length * np.sin(np.deg2rad(angle))
-        axes[0].arrow(gmr_traj[-1, 0], gmr_traj[-1, 1], dx, dy,
-                     head_width=0.02, head_length=0.015, 
-                     fc=colors[i], ec=colors[i], alpha=0.7, zorder=11)
-        
-        # LEFT ANKLE (dims 5-6)
-        # Plot each frame's trajectory
-        for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
-            zip(frame_trajs, frame_colors, frame_labels, frame_styles)
-        ):
-            if i == 0:  # Only add label for first angle
-                axes[1].plot(frame_traj[:, 5], frame_traj[:, 6], 
-                           color=frame_color, linestyle=frame_style, linewidth=1.5,
-                           alpha=0.4, label=frame_label)
-            else:
-                axes[1].plot(frame_traj[:, 5], frame_traj[:, 6], 
-                           color=frame_color, linestyle=frame_style, linewidth=1.5,
-                           alpha=0.4)
-        
-        # Plot GMR trajectory
-        axes[1].plot(gmr_traj[:, 5], gmr_traj[:, 6], 
-                    color=colors[i], linewidth=3.0,
-                    label=f'GMR θ={angle:+.0f}°', zorder=10, alpha=0.9)
-        
-        # Mark start and end
-        axes[1].plot(gmr_traj[0, 5], gmr_traj[0, 6], 'o', 
-                    color=colors[i], markersize=10, zorder=11)
-        axes[1].plot(gmr_traj[-1, 5], gmr_traj[-1, 6], 's', 
-                    color=colors[i], markersize=10, zorder=11)
-        
-        # Draw orientation arrow
-        axes[1].arrow(gmr_traj[-1, 5], gmr_traj[-1, 6], dx, dy,
-                     head_width=0.02, head_length=0.015, 
-                     fc=colors[i], ec=colors[i], alpha=0.7, zorder=11)
+    # Plot demonstration trajectories (gray, thin, transparent)
+    for demo_traj in demo_trajectories:
+        # Right ankle
+        axes[0].plot(demo_traj[:, 0], demo_traj[:, 1], 
+                    'gray', linewidth=0.8, alpha=0.15, zorder=1)
+        # Left ankle
+        axes[1].plot(demo_traj[:, 5], demo_traj[:, 6], 
+                    'gray', linewidth=0.8, alpha=0.15, zorder=1)
+    
+    # Add label for demonstrations (only once)
+    axes[0].plot([], [], 'gray', linewidth=0.8, alpha=0.3, label='Demonstrations (n=30)')
+    axes[1].plot([], [], 'gray', linewidth=0.8, alpha=0.3, label='Demonstrations (n=30)')
+    
+    # RIGHT ANKLE (dims 0-1)
+    # Plot each frame's trajectory
+    for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
+        zip(frame_trajs_list, frame_colors, frame_labels, frame_styles)
+    ):
+        axes[0].plot(frame_traj[:, 0], frame_traj[:, 1], 
+                   color=frame_color, linestyle=frame_style, linewidth=2.0,
+                   alpha=0.6, label=frame_label, zorder=5)
+    
+    # Plot GMR trajectory (product of frames)
+    axes[0].plot(gmr_trajs_list[:, 0], gmr_trajs_list[:, 1], 
+                color='red', linewidth=3.5,
+                label='GMR (Product of Frames)', zorder=10, alpha=0.95)
+    
+    # Mark start and end
+    axes[0].plot(gmr_trajs_list[0, 0], gmr_trajs_list[0, 1], 'o', 
+                color='red', markersize=12, zorder=11, markeredgecolor='darkred', 
+                markeredgewidth=2)
+    axes[0].plot(gmr_trajs_list[-1, 0], gmr_trajs_list[-1, 1], 's', 
+                color='red', markersize=12, zorder=11, markeredgecolor='darkred',
+                markeredgewidth=2)
+    
+    # LEFT ANKLE (dims 5-6)
+    # Plot each frame's trajectory
+    for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
+        zip(frame_trajs_list, frame_colors, frame_labels, frame_styles)
+    ):
+        axes[1].plot(frame_traj[:, 5], frame_traj[:, 6], 
+                   color=frame_color, linestyle=frame_style, linewidth=2.0,
+                   alpha=0.6, label=frame_label, zorder=5)
+    
+    # Plot GMR trajectory
+    axes[1].plot(gmr_trajs_list[:, 5], gmr_trajs_list[:, 6], 
+                color='red', linewidth=3.5,
+                label='GMR (Product of Frames)', zorder=10, alpha=0.95)
+    
+    # Mark start and end
+    axes[1].plot(gmr_trajs_list[0, 5], gmr_trajs_list[0, 6], 'o', 
+                color='red', markersize=12, zorder=11, markeredgecolor='darkred',
+                markeredgewidth=2)
+    axes[1].plot(gmr_trajs_list[-1, 5], gmr_trajs_list[-1, 6], 's', 
+                color='red', markersize=12, zorder=11, markeredgecolor='darkred',
+                markeredgewidth=2)
     
     # Configure right ankle plot
     axes[0].set_xlabel('X Position (m)', fontsize=13, fontweight='bold')
@@ -405,7 +395,7 @@ def plot_adaptation_with_all_frames(angle_deg, frame_trajs_list, gmr_trajs_list,
     axes[0].set_title('Right Ankle Trajectory\n(Product of 3 Frames)', 
                      fontsize=14, fontweight='bold')
     axes[0].grid(True, alpha=0.3)
-    axes[0].legend(loc='best', fontsize=10, ncol=2)
+    axes[0].legend(loc='best', fontsize=10)
     axes[0].set_aspect('equal', adjustable='box')
     
     # Configure left ankle plot
@@ -414,16 +404,16 @@ def plot_adaptation_with_all_frames(angle_deg, frame_trajs_list, gmr_trajs_list,
     axes[1].set_title('Left Ankle Trajectory\n(Product of 3 Frames)', 
                      fontsize=14, fontweight='bold')
     axes[1].grid(True, alpha=0.3)
-    axes[1].legend(loc='best', fontsize=10, ncol=2)
+    axes[1].legend(loc='best', fontsize=10)
     axes[1].set_aspect('equal', adjustable='box')
     
     # Main title
-    fig.suptitle('TPGMM Adaptation: FR2 Orientation Variation (Product of Frames)', 
+    fig.suptitle('TPGMM: Trajectory Recovery using Product of Frames', 
                  fontsize=16, fontweight='bold', y=0.98)
     
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     
-    save_path = os.path.join(output_folder, 'adaptation_product_frames_orientation.png')
+    save_path = os.path.join(output_folder, 'tpgmm_product_frames_with_demonstrations.png')
     plt.savefig(save_path, dpi=200, bbox_inches='tight')
     print(f"\n✓ Saved: {save_path}")
     plt.show()
@@ -442,10 +432,10 @@ def main(model_folder=None, reg_factor=5e-4):
         Regularization factor
     """
     print("\n" + "="*70)
-    print("TPGMM ADAPTATION - PRODUCT OF FRAMES DEMONSTRATION")
+    print("TPGMM - PRODUCT OF FRAMES DEMONSTRATION")
     print("="*70)
     print("Showing trajectories from all 3 frames + GMR recovered trajectory")
-    print("Testing FR2 orientation variation: ±15°")
+    print("With original demonstration trajectories")
     print("="*70)
     
     # Construct model path
@@ -467,44 +457,35 @@ def main(model_folder=None, reg_factor=5e-4):
     model_data = load_model(model_path)
     model = model_data['model']
     
-    # Define orientation angles to test
-    angles_deg = np.array([-15, -7.5, 0, 7.5, 15])
-    angles_rad = np.deg2rad(angles_deg)
+    # Load demonstration trajectories
+    demo_trajectories = np.concatenate([
+        model_data['trajectories_fr1'],
+        model_data['trajectories_fr2'],
+        model_data['trajectories_fr3']
+    ])
+    print(f"\n✓ Loaded {len(demo_trajectories)} demonstration trajectories")
     
     print("\n" + "="*70)
     print("GENERATING TRAJECTORIES")
     print("="*70)
     
-    frame_trajs_list = []
-    gmr_trajs_list = []
+    # Define baseline frames (identity - no transformation)
+    A_FR1, b_FR1 = create_transformation_matrix_2d(0, 0, 0)
+    A_FR2, b_FR2 = create_transformation_matrix_2d(0, 0, 0)
+    A_FR3, b_FR3 = create_transformation_matrix_2d(0, 0, 0)
     
-    for angle_deg, angle_rad in zip(angles_deg, angles_rad):
-        print(f"\nOrientation: {angle_deg:+.1f}°")
-        
-        # Define baseline frames (identity)
-        A_FR1, b_FR1 = create_transformation_matrix_2d(0, 0, 0)
-        
-        # FR2 with rotation
-        A_FR2, b_FR2 = create_transformation_matrix_2d(0, 0, angle_rad)
-        
-        # FR3 baseline
-        A_FR3, b_FR3 = create_transformation_matrix_2d(0, 0, 0)
-        
-        A_frames = [A_FR1, A_FR2, A_FR3]
-        b_frames = [b_FR1, b_FR2, b_FR3]
-        
-        # Generate trajectories
-        frame_trajs, gmr_traj, gmr_sigma = generate_trajectories_all_frames(
-            model, A_frames, b_frames
-        )
-        
-        frame_trajs_list.append(frame_trajs)
-        gmr_trajs_list.append(gmr_traj)
-        
-        print(f"  ✓ Generated FR1 trajectory: shape {frame_trajs[0].shape}")
-        print(f"  ✓ Generated FR2 trajectory: shape {frame_trajs[1].shape}")
-        print(f"  ✓ Generated FR3 trajectory: shape {frame_trajs[2].shape}")
-        print(f"  ✓ Generated GMR trajectory (product): shape {gmr_traj.shape}")
+    A_frames = [A_FR1, A_FR2, A_FR3]
+    b_frames = [b_FR1, b_FR2, b_FR3]
+    
+    # Generate trajectories
+    frame_trajs, gmr_traj, gmr_sigma = generate_trajectories_all_frames(
+        model, A_frames, b_frames
+    )
+    
+    print(f"\n✓ Generated FR1 trajectory: shape {frame_trajs[0].shape}")
+    print(f"✓ Generated FR2 trajectory: shape {frame_trajs[1].shape}")
+    print(f"✓ Generated FR3 trajectory: shape {frame_trajs[2].shape}")
+    print(f"✓ Generated GMR trajectory (product): shape {gmr_traj.shape}")
     
     # Create visualization
     print("\n" + "="*70)
@@ -512,20 +493,22 @@ def main(model_folder=None, reg_factor=5e-4):
     print("="*70)
     
     plot_adaptation_with_all_frames(
-        angles_deg, frame_trajs_list, gmr_trajs_list, output_folder
+        frame_trajs, gmr_traj, demo_trajectories, output_folder
     )
     
     print("\n" + "="*70)
     print("DEMONSTRATION COMPLETE!")
     print("="*70)
     print(f"✓ Results saved in: {output_folder}/")
-    print(f"✓ Figure: adaptation_product_frames_orientation.png")
+    print(f"✓ Figure: tpgmm_product_frames_with_demonstrations.png")
     print("\nThe plot shows:")
-    print("  - Light lines: Individual frame trajectories (FR1, FR2, FR3)")
-    print("  - Thick colored lines: GMR recovered trajectory (product of frames)")
-    print("  - Circles: Start points")
-    print("  - Squares: End points")
-    print("  - Arrows: Orientation direction")
+    print("  - Gray thin lines: Original demonstration trajectories (n=30)")
+    print("  - Blue solid: FR1 (Hip) frame trajectory")
+    print("  - Orange dashed: FR2 (Right Foot) frame trajectory")
+    print("  - Green dash-dot: FR3 (Left Foot) frame trajectory")
+    print("  - Red thick line: GMR recovered trajectory (product of frames)")
+    print("  - Circle: Start point")
+    print("  - Square: End point")
     print("="*70)
 
 

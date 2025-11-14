@@ -1585,7 +1585,7 @@ if __name__ == "__main__":
     print("Trajectory generation (GMR) is done separately.\n")
     
     # Configuration
-    data_path = "TaskPaGMMM\\examples\\7days1\\gait_analysis_export_subject35v4.json"
+    data_path = "TaskPaGMMM\\examples\\7days1\\gait_analysis_export_subject35v6.json"
     subsample_factor = 1  # Adjust as needed
     n_jobs = -1  # Use all CPU cores (only used if use_parallel=True)
     
@@ -1599,7 +1599,7 @@ if __name__ == "__main__":
     # ============================================================
     # REGULARIZATION FACTOR (for covariance matrices)
     # ============================================================
-    reg_factor = 1e-4     # Default: 1e-5 (minimal regularization)
+    reg_factor = 2e-4     # Default: 1e-5 (minimal regularization)
                           # 1e-4 = moderate (slightly fewer components)
                           # 1e-3 = strong (significantly fewer components)
                           # Higher values make covariances more stable but less flexible
