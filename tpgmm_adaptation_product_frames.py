@@ -518,7 +518,7 @@ if __name__ == "__main__":
     print("="*70)
     
     # Configuration
-    reg_factor = 1e-4
+    reg_factor = 3e-4
     model_folder = None
     
     # Run demonstration

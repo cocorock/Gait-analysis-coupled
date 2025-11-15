@@ -680,7 +680,7 @@ if __name__ == "__main__":
     # CONFIGURATION
     # ============================================================
     # Option 1: Auto-construct path based on reg_factor
-    reg_factor = 2e-4  # Must match the reg_factor used during training
+    reg_factor = 3e-4  # Must match the reg_factor used during training
     model_folder = None  # Will auto-construct: train_tpgmm_model_reg5e-04
     
     # Option 2: Manually specify model folder path (uncomment to use)

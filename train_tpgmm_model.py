@@ -740,7 +740,7 @@ def visualize_bic_results(results):
     ax1.plot(results['n_components'], results['bic'], 'bo-', linewidth=2, markersize=8)
     best_idx = np.argmin(results['bic'])
     ax1.plot(results['n_components'][best_idx], results['bic'][best_idx], 
-             'r*', markersize=20, label='Best Model')
+             'r*', markersize=20, label=f'Best Model: {results["n_components"][best_idx]}')
     ax1.set_xlabel('Number of Components (K)', fontsize=12)
     ax1.set_ylabel('BIC Score', fontsize=12)
     ax1.set_title('OPTIMIZED Model Selection: BIC (11 Dimensions)', fontsize=14, fontweight='bold')
@@ -749,7 +749,7 @@ def visualize_bic_results(results):
     
     ax2.plot(results['n_components'], results['log_likelihood'], 'go-', linewidth=2, markersize=8)
     ax2.plot(results['n_components'][best_idx], results['log_likelihood'][best_idx], 
-             'r*', markersize=20, label='Best Model')
+             'r*', markersize=20, label=f'Best Model: {results["n_components"][best_idx]}')
     ax2.set_xlabel('Number of Components (K)', fontsize=12)
     ax2.set_ylabel('Log-Likelihood', fontsize=12)
     ax2.set_title('Final Log-Likelihood (11 Dimensions)', fontsize=14, fontweight='bold')
@@ -1164,7 +1164,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
     ax.axis('equal')
     
     # Add legend info
-    prior_text = f"Prior weights: [{', '.join([f'{p:.2f}' for p in best_model.priors[:5]])}...]"
+    prior_text = ""#f"Prior weights: [{', '.join([f'{p:.2f}' for p in best_model.priors[:5]])}...]"
     ax.text(0.02, 0.98, prior_text, transform=ax.transAxes,
            fontsize=9, verticalalignment='top',
            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
@@ -1301,7 +1301,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
     ax.axis('equal')
     
     # Add legend info
-    prior_text = f"Prior weights: [{', '.join([f'{p:.2f}' for p in best_model.priors[:5]])}...]"
+    prior_text = ""# f"Prior weights: [{', '.join([f'{p:.2f}' for p in best_model.priors[:5]])}...]"
     ax.text(0.02, 0.98, prior_text, transform=ax.transAxes,
            fontsize=9, verticalalignment='top',
            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
@@ -1599,7 +1599,7 @@ if __name__ == "__main__":
     # ============================================================
     # REGULARIZATION FACTOR (for covariance matrices)
     # ============================================================
-    reg_factor = 2e-4     # Default: 1e-5 (minimal regularization)
+    reg_factor = 3e-4     # Default: 1e-5 (minimal regularization)
                           # 1e-4 = moderate (slightly fewer components)
                           # 1e-3 = strong (significantly fewer components)
                           # Higher values make covariances more stable but less flexible

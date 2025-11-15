@@ -1,7 +1,12 @@
 """
-TPGMM ADAPTATION TESTING - FR2 PARAMETER VARIATION
-==================================================
+TPGMM ADAPTATION TESTING - FR2 PARAMETER VARIATION (Enhanced)
+==============================================================
 Tests TPGMM's adaptation capability by varying the FR2 (Right Foot) task parameter.
+
+ENHANCEMENTS:
+- Added color bars to show parameter variation ranges
+- Overlay FR1 trajectory (from baseline) on all adapted trajectory plots
+- FR1 trajectory is shifted to match adapted trajectories' mean position
 
 This script:
 1. Loads trained TPGMM model
@@ -18,15 +23,20 @@ Output:
 - Each shows:
   * Individual frame trajectories (FR1, FR2, FR3) - thin lines
   * Baseline GMR trajectory (no adaptation) - thick black line
+  * FR1 trajectory (from baseline) - thick red dashed line
   * Multiple adapted trajectories with varying FR2 parameters - colored gradient
+  * Color bar showing parameter variation range
 
 Author: Victor
 Date: November 2024
+Enhanced: November 2024
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from matplotlib.colorbar import ColorbarBase
+from matplotlib.colors import Normalize
 import pickle
 import os
 import sys
@@ -39,7 +49,7 @@ plt.rcParams['axes.labelsize'] = 12
 plt.rcParams['axes.titlesize'] = 14
 plt.rcParams['xtick.labelsize'] = 10
 plt.rcParams['ytick.labelsize'] = 10
-plt.rcParams['legend.fontsize'] = 9
+plt.rcParams['legend.fontsize'] = 6
 plt.rcParams['figure.titlesize'] = 16
 
 np.set_printoptions(precision=3, suppress=True)
@@ -206,34 +216,41 @@ def create_transformation_matrix_2d(x, y, theta):
     
     Parameters:
     -----------
-    x, y : float
-        Translation in x and y
+    x : float
+        Translation in x (meters)
+    y : float
+        Translation in y (meters)
     theta : float
-        Rotation angle in radians
+        Rotation angle (degrees)
     
     Returns:
     --------
-    A : (11, 11) array
-        Transformation matrix (rotation + identity for non-spatial dims)
-    b : (11,) array
+    A : ndarray (11, 11)
+        Rotation matrix (block diagonal)
+    b : ndarray (11,)
         Translation vector
     """
-    cos_t = np.cos(theta)
-    sin_t = np.sin(theta)
+    # Convert to radians
+    theta_rad = np.deg2rad(theta)
     
-    # Rotation matrix for 2D positions and velocities
-    R = np.array([[cos_t, -sin_t],
-                  [sin_t, cos_t]])
+    # 2D rotation matrix
+    cos_t = np.cos(theta_rad)
+    sin_t = np.sin(theta_rad)
+    R2D = np.array([
+        [cos_t, -sin_t],
+        [sin_t,  cos_t]
+    ])
     
-    # Full transformation matrix (11x11)
+    # Block diagonal matrix (11x11)
     A = np.eye(11)
-    A[0:2, 0:2] = R  # Right ankle position
-    A[2:4, 2:4] = R  # Right ankle velocity
-    # A[4, 4] = 1    # Right ankle angle (no change)
-    A[5:7, 5:7] = R  # Left ankle position
-    A[7:9, 7:9] = R  # Left ankle velocity
-    # A[9, 9] = 1    # Left ankle angle (no change)
-    # A[10, 10] = 1  # Time (no change)
+    
+    # Apply rotation to position pairs
+    A[0:2, 0:2] = R2D  # Right ankle (X, Y)
+    A[2:4, 2:4] = R2D  # Right ankle (Xd, Yd)
+    A[5:7, 5:7] = R2D  # Left ankle (X, Y)
+    A[7:9, 7:9] = R2D  # Left ankle (Xd, Yd)
+    # Dimension 4 (Right Yd) and 9 (Left Yd) are scalars - no rotation
+    # Dimension 10 is time - no rotation
     
     # Translation vector (11,)
     b = np.zeros(11)
@@ -286,6 +303,8 @@ def generate_trajectories_with_adaptation(model, fr2_x_values, fr2_y_values=None
         Frame trajectories with no adaptation [FR1, FR2, FR3]
     baseline_gmr : array
         Baseline GMR trajectory (no adaptation)
+    fr1_trajectory : array
+        FR1 frame trajectory (from baseline)
     adapted_trajectories_x : list of arrays
         List of adapted GMR trajectories for each FR2 x-value
     adapted_trajectories_y : list of arrays or None
@@ -329,10 +348,14 @@ def generate_trajectories_with_adaptation(model, fr2_x_values, fr2_y_values=None
         time_query, input_dims, output_dims, A_frames_baseline, b_frames_baseline
     )
     
+    # Extract FR1 trajectory
+    fr1_trajectory = baseline_frame_trajs[0]
+    
     print(f"✓ Baseline FR1 trajectory: {baseline_frame_trajs[0].shape}")
     print(f"✓ Baseline FR2 trajectory: {baseline_frame_trajs[1].shape}")
     print(f"✓ Baseline FR3 trajectory: {baseline_frame_trajs[2].shape}")
     print(f"✓ Baseline GMR trajectory: {baseline_gmr.shape}")
+    print(f"✓ FR1 trajectory extracted for overlay")
     
     # =========================================
     # 2. ADAPTED TRAJECTORIES - X-POSITION
@@ -398,7 +421,7 @@ def generate_trajectories_with_adaptation(model, fr2_x_values, fr2_y_values=None
                 print(f"   [{i+1}/{len(fr2_y_values)}] FR2_y = {fr2_y:+.3f}m → Generated")
         
         print(f"✓ Generated {len(adapted_trajectories_y)} adapted trajectories (Y-position)")
-        
+    
     # =========================================
     # 4. ADAPTED TRAJECTORIES - ORIENTATION (Optional)
     # =========================================
@@ -406,18 +429,17 @@ def generate_trajectories_with_adaptation(model, fr2_x_values, fr2_y_values=None
     
     if fr2_theta_values is not None:
         print(f"\n4. Generating {len(fr2_theta_values)} adapted trajectories (Orientation)...")
-        print(f"   FR2 orientation range: [{fr2_theta_values[0]:.3f}, {fr2_theta_values[-1]:.3f}] degrees")
+        print(f"   FR2 theta range: [{fr2_theta_values[0]:.3f}, {fr2_theta_values[-1]:.3f}]")
         
         adapted_trajectories_theta = []
         
-        for i, fr2_theta_deg in enumerate(fr2_theta_values):
+        for i, fr2_theta in enumerate(fr2_theta_values):
             # Keep FR1 and FR3 unchanged
             A_FR1_adapt, b_FR1_adapt = create_transformation_matrix_2d(0, 0, 0)
             A_FR3_adapt, b_FR3_adapt = create_transformation_matrix_2d(0, 0, 0)
             
             # Vary FR2 orientation
-            fr2_theta_rad = np.deg2rad(fr2_theta_deg)
-            A_FR2_adapt, b_FR2_adapt = create_transformation_matrix_2d(0, 0, fr2_theta_rad)
+            A_FR2_adapt, b_FR2_adapt = create_transformation_matrix_2d(0, 0, fr2_theta)
             
             A_frames_adapt = [A_FR1_adapt, A_FR2_adapt, A_FR3_adapt]
             b_frames_adapt = [b_FR1_adapt, b_FR2_adapt, b_FR3_adapt]
@@ -430,68 +452,71 @@ def generate_trajectories_with_adaptation(model, fr2_x_values, fr2_y_values=None
             adapted_trajectories_theta.append(adapted_gmr)
             
             if (i + 1) % 3 == 0 or i == 0 or i == len(fr2_theta_values) - 1:
-                print(f"   [{i+1}/{len(fr2_theta_values)}] FR2_theta = {fr2_theta_deg:+.3f} deg → Generated")
+                print(f"   [{i+1}/{len(fr2_theta_values)}] FR2_θ = {fr2_theta:+.3f}° → Generated")
         
         print(f"✓ Generated {len(adapted_trajectories_theta)} adapted trajectories (Orientation)")
     
-    return baseline_frame_trajs, baseline_gmr, adapted_trajectories_x, adapted_trajectories_y, adapted_trajectories_theta
+    return baseline_frame_trajs, baseline_gmr, fr1_trajectory, \
+           adapted_trajectories_x, adapted_trajectories_y, adapted_trajectories_theta
 
-def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajectories, 
-                         fr2_x_values, output_folder):
-    """
-    Plot adaptation test results - X-POSITION VARIATION
-    
-    Parameters:
-    -----------
-    baseline_frame_trajs : list
-        Frame trajectories [FR1, FR2, FR3]
-    baseline_gmr : array
-        Baseline GMR trajectory
-    adapted_trajectories : list of arrays
-        Adapted GMR trajectories
-    fr2_x_values : array
-        FR2 x-position values used
-    output_folder : str
-        Where to save figures
-    """
+
+def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, fr1_trajectory,
+                           adapted_trajectories, fr2_x_values, output_folder):
+    """Plot adaptation test for FR2 X-position variation with color bar and FR1 overlay"""
     print("\n" + "="*70)
-    print("CREATING ADAPTATION VISUALIZATION")
+    print("PLOTTING X-POSITION ADAPTATION TEST")
     print("="*70)
     
-    fig, axes = plt.subplots(1, 2, figsize=(18, 8))
-    
-    # Define colors for frames
-    frame_colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # Blue, Orange, Green
-    frame_labels = ['FR1 (Hip)', 'FR2 (Right Foot)', 'FR3 (Left Foot)']
-    frame_styles = ['-', '--', '-.']
-    
-    # Color map for adapted trajectories (from blue to red)
-    n_adapt = len(adapted_trajectories)
+    # Create color map
     cmap = cm.get_cmap('coolwarm')
-    adapt_colors = [cmap(i / (n_adapt - 1)) for i in range(n_adapt)]
+    norm = Normalize(vmin=fr2_x_values.min(), vmax=fr2_x_values.max())
+    adapt_colors = [cmap(norm(val)) for val in fr2_x_values]
+    
+    # Create figure with 3 subplots: 2 for data, 1 for colorbar
+    fig = plt.figure(figsize=(16, 6))
+    
+    # GridSpec for layout: 2 main plots + 1 colorbar
+    from matplotlib.gridspec import GridSpec
+    gs = GridSpec(1, 3, width_ratios=[1, 1, 0.05], wspace=0.3)
+    
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
+    cbar_ax = fig.add_subplot(gs[0, 2])
+    
+    # Calculate FR1 displacement for each ankle using FIRST POINT
+    # Use middle adapted trajectory (no transformation) as reference
+    middle_idx = len(adapted_trajectories) // 2
+    
+    # Right ankle (dims 0-1)
+    fr1_first_right = fr1_trajectory[0, 0:2]
+    adapted_first_right = adapted_trajectories[middle_idx][0, 0:2]
+    fr1_displacement_right = 0#adapted_first_right - fr1_first_right
+    
+    # Left ankle (dims 5-6)
+    fr1_first_left = fr1_trajectory[0, 5:7]
+    adapted_first_left = adapted_trajectories[middle_idx][0, 5:7]
+    fr1_displacement_left = 0#adapted_first_left - fr1_first_left
     
     # =========================================
     # RIGHT ANKLE (dimensions 0-1)
     # =========================================
     
-    # # 1. Plot individual frame trajectories (thin, semi-transparent)
-    # for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
-    #     zip(baseline_frame_trajs, frame_colors, frame_labels, frame_styles)
-    # ):
-    #     axes[0].plot(frame_traj[:, 0], frame_traj[:, 1], 
-    #                color=frame_color, linestyle=frame_style, linewidth=1.5,
-    #                alpha=0.4, label=frame_label, zorder=3)
-    
-    # 2. Plot baseline GMR trajectory (thick black line)
+    # 1. Plot baseline GMR trajectory (thick black line)
     axes[0].plot(baseline_gmr[:, 0], baseline_gmr[:, 1], 
-                'k-', linewidth=2.0, label='Baseline GMR (no adaptation)',
+                'k--', linewidth=2.0, label='Baseline GMR (no adaptation)',
                 zorder=5, alpha=0.8)
     
     # Mark start and end of baseline
     axes[0].plot(baseline_gmr[0, 0], baseline_gmr[0, 1], 'ko', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
+                label='Start/End points')
     axes[0].plot(baseline_gmr[-1, 0], baseline_gmr[-1, 1], 'ks', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    
+    # 2. Plot FR1 trajectory (shifted to match adapted mean)
+    # fr1_shifted_right = fr1_trajectory[:, 0:2] + fr1_displacement_right
+    # axes[0].plot(fr1_shifted_right[:, 0], fr1_shifted_right[:, 1],
+    #             'r--', linewidth=3.0, alpha=0.8, label='FR1 trajectory',
+    #             zorder=5)
     
     # 3. Plot adapted trajectories (colored gradient)
     for i, (adapted_traj, fr2_x, color) in enumerate(
@@ -508,10 +533,10 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajector
         # Calculate displacement from baseline's mean position and anti-transform
         baseline_mean = np.mean(baseline_gmr[:, 0:2], axis=0)
         adapted_mean = np.mean(adapted_traj[:, 0:2], axis=0)
-        displacement = adapted_mean - baseline_mean
+        displacement = [0 , 0]#adapted_mean - baseline_mean
         
         axes[0].plot(adapted_traj[:, 0] - displacement[0], adapted_traj[:, 1] - displacement[1],
-                   color=color, linewidth=2.0, alpha=0.7,
+                   color=color, linewidth=1.0, alpha=0.7,
                    label=label, zorder=4)
     
     # Configure right ankle plot
@@ -520,31 +545,31 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajector
     axes[0].set_title('Right Ankle Position\nAdaptation via FR2 X-Position', 
                      fontsize=14, fontweight='bold')
     axes[0].grid(True, alpha=0.3)
-    axes[0].legend(loc='best', fontsize=9, framealpha=0.9)
+    axes[0].legend(loc='best', fontsize=8, framealpha=0.9)
     axes[0].set_aspect('equal', adjustable='box')
+    axes[0].set_ylim(-0.35, 0.1)
     
     # =========================================
     # LEFT ANKLE (dimensions 5-6)
     # =========================================
     
-    # # 1. Plot individual frame trajectories
-    # for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
-    #     zip(baseline_frame_trajs, frame_colors, frame_labels, frame_styles)
-    # ):
-    #     axes[1].plot(frame_traj[:, 5], frame_traj[:, 6], 
-    #                color=frame_color, linestyle=frame_style, linewidth=1.5,
-    #                alpha=0.4, label=frame_label, zorder=3)
-    
-    # 2. Plot baseline GMR trajectory
+    # 1. Plot baseline GMR trajectory
     axes[1].plot(baseline_gmr[:, 5], baseline_gmr[:, 6], 
-                'k-', linewidth=2.0, label='Baseline GMR (no adaptation)',
+                'k--', linewidth=2.0, label='Baseline GMR (no adaptation)',
                 zorder=5, alpha=0.8)
     
     # Mark start and end
     axes[1].plot(baseline_gmr[0, 5], baseline_gmr[0, 6], 'ko', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
+                label='Start/End points')
     axes[1].plot(baseline_gmr[-1, 5], baseline_gmr[-1, 6], 'ks', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    
+    # # 2. Plot FR1 trajectory (shifted to match adapted mean)
+    # fr1_shifted_left = fr1_trajectory[:, 5:7] + fr1_displacement_left
+    # axes[1].plot(fr1_shifted_left[:, 0], fr1_shifted_left[:, 1],
+    #             'r--', linewidth=3.0, alpha=0.8, label='FR1 trajectory',
+    #             zorder=5)
     
     # 3. Plot adapted trajectories
     for i, (adapted_traj, fr2_x, color) in enumerate(
@@ -560,10 +585,10 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajector
         # Calculate displacement from baseline's mean position and anti-transform
         baseline_mean = np.mean(baseline_gmr[:, 5:7], axis=0)
         adapted_mean = np.mean(adapted_traj[:, 5:7], axis=0)
-        displacement = adapted_mean - baseline_mean
+        displacement = [0 , 0]#0#adapted_mean - baseline_mean
         
         axes[1].plot(adapted_traj[:, 5] - displacement[0], adapted_traj[:, 6] - displacement[1],
-                   color=color, linewidth=2.0, alpha=0.7,
+                   color=color, linewidth=1.0, alpha=0.7,
                    label=label, zorder=4)
     
     # Configure left ankle plot
@@ -572,8 +597,15 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajector
     axes[1].set_title('Left Ankle Position\nAdaptation via FR2 X-Position', 
                      fontsize=14, fontweight='bold')
     axes[1].grid(True, alpha=0.3)
-    axes[1].legend(loc='best', fontsize=9, framealpha=0.9)
+    axes[1].legend(loc='best', fontsize=8, framealpha=0.9)
     axes[1].set_aspect('equal', adjustable='box')
+    axes[1].set_ylim(-0.35, 0.1)
+    
+    # =========================================
+    # COLOR BAR
+    # =========================================
+    cb = ColorbarBase(cbar_ax, cmap=cmap, norm=norm, orientation='vertical')
+    cb.set_label('FR2 X-Position (m)', fontsize=12, fontweight='bold')
     
     # Main title
     fig.suptitle('TPGMM Adaptation Test: Varying FR2 (Right Foot) X-Position', 
@@ -587,68 +619,62 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, adapted_trajector
     plt.show()
     plt.close()
 
-def plot_adaptation_test_y(baseline_frame_trajs, baseline_gmr, adapted_trajectories, 
-                         fr2_y_values, output_folder):
-    """
-    Plot adaptation test results - Y-POSITION VARIATION
-    
-    Parameters:
-    -----------
-    baseline_frame_trajs : list
-        Frame trajectories [FR1, FR2, FR3]
-    baseline_gmr : array
-        Baseline GMR trajectory
-    adapted_trajectories : list of arrays
-        Adapted GMR trajectories
-    fr2_y_values : array
-        FR2 y-position values used
-    output_folder : str
-        Where to save figures
-    """
+def plot_adaptation_test_y(baseline_frame_trajs, baseline_gmr, fr1_trajectory,
+                           adapted_trajectories, fr2_y_values, output_folder):
+    """Plot adaptation test for FR2 Y-position variation with color bar and FR1 overlay"""
     print("\n" + "="*70)
-    print("CREATING Y-POSITION ADAPTATION VISUALIZATION")
+    print("PLOTTING Y-POSITION ADAPTATION TEST")
     print("="*70)
     
-    fig, axes = plt.subplots(1, 2, figsize=(18, 8))
-    
-    # Define colors for frames
-    frame_colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # Blue, Orange, Green
-    frame_labels = ['FR1 (Hip)', 'FR2 (Right Foot)', 'FR3 (Left Foot)']
-    frame_styles = ['-', '--', '-.']
-    
-    # Color map for adapted trajectories (from blue to red)
-    n_adapt = len(adapted_trajectories)
+    # Create color map
     cmap = cm.get_cmap('coolwarm')
-    adapt_colors = [cmap(i / (n_adapt - 1)) for i in range(n_adapt)]
+    norm = Normalize(vmin=fr2_y_values.min(), vmax=fr2_y_values.max())
+    adapt_colors = [cmap(norm(val)) for val in fr2_y_values]
+    
+    # Create figure with 3 subplots: 2 for data, 1 for colorbar
+    fig = plt.figure(figsize=(16, 6))
+    
+    from matplotlib.gridspec import GridSpec
+    gs = GridSpec(1, 3, width_ratios=[1, 1, 0.05], wspace=0.3)
+    
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
+    cbar_ax = fig.add_subplot(gs[0, 2])
+    
+    # Calculate FR1 displacement for each ankle using FIRST POINT
+    # Use middle adapted trajectory (no transformation) as reference
+    middle_idx = len(adapted_trajectories) // 2
+    
+    fr1_first_right = fr1_trajectory[0, 0:2]
+    adapted_first_right = adapted_trajectories[middle_idx][0, 0:2]
+    fr1_displacement_right = 0#adapted_first_right - fr1_first_right
+    
+    fr1_first_left = fr1_trajectory[0, 5:7]
+    adapted_first_left = adapted_trajectories[middle_idx][0, 5:7]
+    fr1_displacement_left = 0#adapted_first_left - fr1_first_left
     
     # =========================================
     # RIGHT ANKLE (dimensions 0-1)
     # =========================================
     
-    # # 1. Plot individual frame trajectories (thin, semi-transparent)
-    # for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
-    #     zip(baseline_frame_trajs, frame_colors, frame_labels, frame_styles)
-    # ):
-    #     axes[0].plot(frame_traj[:, 0], frame_traj[:, 1], 
-    #                color=frame_color, linestyle=frame_style, linewidth=1.5,
-    #                alpha=0.4, label=frame_label, zorder=3)
-    
-    # 2. Plot baseline GMR trajectory (thick black line)
     axes[0].plot(baseline_gmr[:, 0], baseline_gmr[:, 1], 
-                'k-', linewidth=3.0, label='Baseline GMR (no adaptation)',
+                'k--', linewidth=2.0, label='Baseline GMR (no adaptation)',
                 zorder=5, alpha=0.8)
     
-    # Mark start and end of baseline
     axes[0].plot(baseline_gmr[0, 0], baseline_gmr[0, 1], 'ko', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
+                label='Start/End points')
     axes[0].plot(baseline_gmr[-1, 0], baseline_gmr[-1, 1], 'ks', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
-    # 3. Plot adapted trajectories (colored gradient)
+    # # Plot FR1 trajectory
+    # fr1_shifted_right = fr1_trajectory[:, 0:2] + fr1_displacement_right
+    # axes[0].plot(fr1_shifted_right[:, 0], fr1_shifted_right[:, 1],
+    #             'r--', linewidth=3.0, alpha=0.8, label='FR1 trajectory',
+    #             zorder=5)
+    
     for i, (adapted_traj, fr2_y, color) in enumerate(
         zip(adapted_trajectories, fr2_y_values, adapt_colors)
     ):
-        # Only label first and last
         if i == 0:
             label = f'FR2_y = {fr2_y:+.2f}m (min)'
         elif i == len(adapted_trajectories) - 1:
@@ -656,48 +682,42 @@ def plot_adaptation_test_y(baseline_frame_trajs, baseline_gmr, adapted_trajector
         else:
             label = None
         
-        # Calculate displacement from baseline's mean position and anti-transform
         baseline_mean = np.mean(baseline_gmr[:, 0:2], axis=0)
         adapted_mean = np.mean(adapted_traj[:, 0:2], axis=0)
-        displacement = adapted_mean - baseline_mean
+        displacement = [0 , 0]#adapted_mean - baseline_mean
         
         axes[0].plot(adapted_traj[:, 0] - displacement[0], adapted_traj[:, 1] - displacement[1],
-                   color=color, linewidth=2.0, alpha=0.7,
+                   color=color, linewidth=1.0, alpha=0.7,
                    label=label, zorder=4)
     
-    # Configure right ankle plot
     axes[0].set_xlabel('X Position (m)', fontsize=13, fontweight='bold')
     axes[0].set_ylabel('Y Position (m)', fontsize=13, fontweight='bold')
     axes[0].set_title('Right Ankle Position\nAdaptation via FR2 Y-Position', 
                      fontsize=14, fontweight='bold')
     axes[0].grid(True, alpha=0.3)
-    axes[0].legend(loc='best', fontsize=9, framealpha=0.9)
+    axes[0].legend(loc='best', fontsize=8, framealpha=0.9)
     axes[0].set_aspect('equal', adjustable='box')
     
     # =========================================
     # LEFT ANKLE (dimensions 5-6)
     # =========================================
     
-    # # 1. Plot individual frame trajectories
-    # for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
-    #     zip(baseline_frame_trajs, frame_colors, frame_labels, frame_styles)
-    # ):
-    #     axes[1].plot(frame_traj[:, 5], frame_traj[:, 6], 
-    #                color=frame_color, linestyle=frame_style, linewidth=1.5,
-    #                alpha=0.4, label=frame_label, zorder=3)
-    
-    # 2. Plot baseline GMR trajectory
     axes[1].plot(baseline_gmr[:, 5], baseline_gmr[:, 6], 
-                'k-', linewidth=3.0, label='Baseline GMR (no adaptation)',
+                'k--', linewidth=2.0, label='Baseline GMR (no adaptation)',
                 zorder=5, alpha=0.8)
     
-    # Mark start and end
     axes[1].plot(baseline_gmr[0, 5], baseline_gmr[0, 6], 'ko', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
+                label='Start/End points')
     axes[1].plot(baseline_gmr[-1, 5], baseline_gmr[-1, 6], 'ks', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
-    # 3. Plot adapted trajectories
+    # # Plot FR1 trajectory
+    # fr1_shifted_left = fr1_trajectory[:, 5:7] + fr1_displacement_left
+    # axes[1].plot(fr1_shifted_left[:, 0], fr1_shifted_left[:, 1],
+    #             'r--', linewidth=3.0, alpha=0.8, label='FR1 trajectory',
+    #             zorder=5)
+    
     for i, (adapted_traj, fr2_y, color) in enumerate(
         zip(adapted_trajectories, fr2_y_values, adapt_colors)
     ):
@@ -708,25 +728,28 @@ def plot_adaptation_test_y(baseline_frame_trajs, baseline_gmr, adapted_trajector
         else:
             label = None
         
-        # Calculate displacement from baseline's mean position and anti-transform
         baseline_mean = np.mean(baseline_gmr[:, 5:7], axis=0)
         adapted_mean = np.mean(adapted_traj[:, 5:7], axis=0)
-        displacement = adapted_mean - baseline_mean
+        displacement = [0 , 0]#adapted_mean - baseline_mean
         
         axes[1].plot(adapted_traj[:, 5] - displacement[0], adapted_traj[:, 6] - displacement[1],
-                   color=color, linewidth=2.0, alpha=0.7,
+                   color=color, linewidth=1.0, alpha=0.7,
                    label=label, zorder=4)
     
-    # Configure left ankle plot
     axes[1].set_xlabel('X Position (m)', fontsize=13, fontweight='bold')
     axes[1].set_ylabel('Y Position (m)', fontsize=13, fontweight='bold')
     axes[1].set_title('Left Ankle Position\nAdaptation via FR2 Y-Position', 
                      fontsize=14, fontweight='bold')
     axes[1].grid(True, alpha=0.3)
-    axes[1].legend(loc='best', fontsize=9, framealpha=0.9)
+    axes[1].legend(loc='best', fontsize=8, framealpha=0.9)
     axes[1].set_aspect('equal', adjustable='box')
     
-    # Main title
+    # =========================================
+    # COLOR BAR
+    # =========================================
+    cb = ColorbarBase(cbar_ax, cmap=cmap, norm=norm, orientation='vertical')
+    cb.set_label('FR2 Y-Position (m)', fontsize=12, fontweight='bold')
+    
     fig.suptitle('TPGMM Adaptation Test: Varying FR2 (Right Foot) Y-Position', 
                  fontsize=16, fontweight='bold', y=0.98)
     
@@ -738,68 +761,62 @@ def plot_adaptation_test_y(baseline_frame_trajs, baseline_gmr, adapted_trajector
     plt.show()
     plt.close()
 
-def plot_adaptation_test_theta(baseline_frame_trajs, baseline_gmr, adapted_trajectories, 
-                         fr2_theta_values, output_folder):
-    """
-    Plot adaptation test results - ORIENTATION VARIATION
-    
-    Parameters:
-    -----------
-    baseline_frame_trajs : list
-        Frame trajectories [FR1, FR2, FR3]
-    baseline_gmr : array
-        Baseline GMR trajectory
-    adapted_trajectories : list of arrays
-        Adapted GMR trajectories
-    fr2_theta_values : array
-        FR2 orientation values used (in degrees)
-    output_folder : str
-        Where to save figures
-    """
+def plot_adaptation_test_theta(baseline_frame_trajs, baseline_gmr, fr1_trajectory,
+                               adapted_trajectories, fr2_theta_values, output_folder):
+    """Plot adaptation test for FR2 Orientation variation with color bar and FR1 overlay"""
     print("\n" + "="*70)
-    print("CREATING ORIENTATION ADAPTATION VISUALIZATION")
+    print("PLOTTING ORIENTATION ADAPTATION TEST")
     print("="*70)
     
-    fig, axes = plt.subplots(1, 2, figsize=(18, 8))
+    # Create color map
+    cmap = cm.get_cmap('viridis')
+    norm = Normalize(vmin=fr2_theta_values.min(), vmax=fr2_theta_values.max())
+    adapt_colors = [cmap(norm(val)) for val in fr2_theta_values]
     
-    # Define colors for frames
-    frame_colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # Blue, Orange, Green
-    frame_labels = ['FR1 (Hip)', 'FR2 (Right Foot)', 'FR3 (Left Foot)']
-    frame_styles = ['-', '--', '-.']
+    # Create figure with 3 subplots: 2 for data, 1 for colorbar
+    fig = plt.figure(figsize=(16, 6))
     
-    # Color map for adapted trajectories (from blue to red)
-    n_adapt = len(adapted_trajectories)
-    cmap = cm.get_cmap('coolwarm')
-    adapt_colors = [cmap(i / (n_adapt - 1)) for i in range(n_adapt)]
+    from matplotlib.gridspec import GridSpec
+    gs = GridSpec(1, 3, width_ratios=[1, 1, 0.05], wspace=0.3)
+    
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
+    cbar_ax = fig.add_subplot(gs[0, 2])
+    
+    # Calculate FR1 displacement for each ankle using FIRST POINT
+    # Use middle adapted trajectory (no transformation) as reference
+    middle_idx = len(adapted_trajectories) // 2
+    
+    fr1_first_right = fr1_trajectory[-1, 0:2]
+    adapted_first_right = adapted_trajectories[middle_idx][-1, 0:2]
+    fr1_displacement_right = 0#adapted_first_right - fr1_first_right
+    
+    fr1_first_left = fr1_trajectory[-1, 5:7]
+    adapted_first_left = adapted_trajectories[middle_idx][-1, 5:7]
+    fr1_displacement_left = 0#adapted_first_left - fr1_first_left
     
     # =========================================
     # RIGHT ANKLE (dimensions 0-1)
     # =========================================
     
-    # # 1. Plot individual frame trajectories (thin, semi-transparent)
-    # for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
-    #     zip(baseline_frame_trajs, frame_colors, frame_labels, frame_styles)
-    # ):
-    #     axes[0].plot(frame_traj[:, 0], frame_traj[:, 1], 
-    #                color=frame_color, linestyle=frame_style, linewidth=1.5,
-    #                alpha=0.4, label=frame_label, zorder=3)
-    
-    # 2. Plot baseline GMR trajectory (thick black line)
     axes[0].plot(baseline_gmr[:, 0], baseline_gmr[:, 1], 
-                'k-', linewidth=3.0, label='Baseline GMR (no adaptation)',
+                'k--', linewidth=2.0, label='Baseline GMR (no adaptation)',
                 zorder=5, alpha=0.8)
     
-    # Mark start and end of baseline
     axes[0].plot(baseline_gmr[0, 0], baseline_gmr[0, 1], 'ko', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
+                label='Start/End points')
     axes[0].plot(baseline_gmr[-1, 0], baseline_gmr[-1, 1], 'ks', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
-    # 3. Plot adapted trajectories (colored gradient)
+    # # Plot FR1 trajectory
+    # fr1_shifted_right = fr1_trajectory[:, 0:2] + fr1_displacement_right
+    # axes[0].plot(fr1_shifted_right[:, 0], fr1_shifted_right[:, 1],
+    #             'r--', linewidth=3.0, alpha=0.8, label='FR1 trajectory',
+    #             zorder=5)
+    
     for i, (adapted_traj, fr2_theta, color) in enumerate(
         zip(adapted_trajectories, fr2_theta_values, adapt_colors)
     ):
-        # Only label first and last
         if i == 0:
             label = f'FR2_θ = {fr2_theta:+.2f}° (min)'
         elif i == len(adapted_trajectories) - 1:
@@ -807,48 +824,42 @@ def plot_adaptation_test_theta(baseline_frame_trajs, baseline_gmr, adapted_traje
         else:
             label = None
         
-        # Calculate displacement from baseline's mean position and anti-transform
         baseline_mean = np.mean(baseline_gmr[:, 0:2], axis=0)
         adapted_mean = np.mean(adapted_traj[:, 0:2], axis=0)
-        displacement = adapted_mean - baseline_mean
+        displacement = [0 , 0]#adapted_mean - baseline_mean
         
         axes[0].plot(adapted_traj[:, 0] - displacement[0], adapted_traj[:, 1] - displacement[1],
-                   color=color, linewidth=2.0, alpha=0.7,
+                   color=color, linewidth=1.0, alpha=0.7,
                    label=label, zorder=4)
     
-    # Configure right ankle plot
     axes[0].set_xlabel('X Position (m)', fontsize=13, fontweight='bold')
     axes[0].set_ylabel('Y Position (m)', fontsize=13, fontweight='bold')
     axes[0].set_title('Right Ankle Position\nAdaptation via FR2 Orientation', 
                      fontsize=14, fontweight='bold')
     axes[0].grid(True, alpha=0.3)
-    axes[0].legend(loc='best', fontsize=9, framealpha=0.9)
+    axes[0].legend(loc='best', fontsize=8, framealpha=0.9)
     axes[0].set_aspect('equal', adjustable='box')
     
     # =========================================
     # LEFT ANKLE (dimensions 5-6)
     # =========================================
     
-    # # 1. Plot individual frame trajectories
-    # for frame_idx, (frame_traj, frame_color, frame_label, frame_style) in enumerate(
-    #     zip(baseline_frame_trajs, frame_colors, frame_labels, frame_styles)
-    # ):
-    #     axes[1].plot(frame_traj[:, 5], frame_traj[:, 6], 
-    #                color=frame_color, linestyle=frame_style, linewidth=1.5,
-    #                alpha=0.4, label=frame_label, zorder=3)
-    
-    # 2. Plot baseline GMR trajectory
     axes[1].plot(baseline_gmr[:, 5], baseline_gmr[:, 6], 
-                'k-', linewidth=3.0, label='Baseline GMR (no adaptation)',
+                'k--', linewidth=2.0, label='Baseline GMR (no adaptation)',
                 zorder=5, alpha=0.8)
     
-    # Mark start and end
     axes[1].plot(baseline_gmr[0, 5], baseline_gmr[0, 6], 'ko', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
+                label='Start/End points')
     axes[1].plot(baseline_gmr[-1, 5], baseline_gmr[-1, 6], 'ks', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
-    # 3. Plot adapted trajectories
+    # # Plot FR1 trajectory
+    # fr1_shifted_left = fr1_trajectory[:, 5:7] + fr1_displacement_left
+    # axes[1].plot(fr1_shifted_left[:, 0], fr1_shifted_left[:, 1],
+    #             'r--', linewidth=3.0, alpha=0.8, label='FR1 trajectory',
+    #             zorder=5)
+    
     for i, (adapted_traj, fr2_theta, color) in enumerate(
         zip(adapted_trajectories, fr2_theta_values, adapt_colors)
     ):
@@ -859,25 +870,28 @@ def plot_adaptation_test_theta(baseline_frame_trajs, baseline_gmr, adapted_traje
         else:
             label = None
         
-        # Calculate displacement from baseline's mean position and anti-transform
         baseline_mean = np.mean(baseline_gmr[:, 5:7], axis=0)
         adapted_mean = np.mean(adapted_traj[:, 5:7], axis=0)
-        displacement = adapted_mean - baseline_mean
+        displacement = [0 , 0]#adapted_mean - baseline_mean
         
         axes[1].plot(adapted_traj[:, 5] - displacement[0], adapted_traj[:, 6] - displacement[1],
-                   color=color, linewidth=2.0, alpha=0.7,
+                   color=color, linewidth=1.0, alpha=0.7,
                    label=label, zorder=4)
     
-    # Configure left ankle plot
     axes[1].set_xlabel('X Position (m)', fontsize=13, fontweight='bold')
     axes[1].set_ylabel('Y Position (m)', fontsize=13, fontweight='bold')
     axes[1].set_title('Left Ankle Position\nAdaptation via FR2 Orientation', 
                      fontsize=14, fontweight='bold')
     axes[1].grid(True, alpha=0.3)
-    axes[1].legend(loc='best', fontsize=9, framealpha=0.9)
+    axes[1].legend(loc='best', fontsize=8, framealpha=0.9)
     axes[1].set_aspect('equal', adjustable='box')
     
-    # Main title
+    # =========================================
+    # COLOR BAR
+    # =========================================
+    cb = ColorbarBase(cbar_ax, cmap=cmap, norm=norm, orientation='vertical')
+    cb.set_label('FR2 Orientation (degrees)', fontsize=12, fontweight='bold')
+    
     fig.suptitle('TPGMM Adaptation Test: Varying FR2 (Right Foot) Orientation', 
                  fontsize=16, fontweight='bold', y=0.98)
     
@@ -901,12 +915,16 @@ def main(model_folder=None, reg_factor=1e-4):
         Regularization factor used in training
     """
     print("\n" + "="*70)
-    print("TPGMM ADAPTATION TEST - FR2 PARAMETER VARIATION")
+    print("TPGMM ADAPTATION TEST - FR2 PARAMETER VARIATION (ENHANCED)")
     print("="*70)
     print("Testing adaptation capability by varying FR2 (Right Foot) parameters")
     print("  X-Position: -1.0m to +1.0m")
     print("  Y-Position: -0.3m to +0.3m")
     print("  Orientation: -15deg to +15deg")
+    print("\nENHANCEMENTS:")
+    print("  ✓ Color bars showing parameter variation ranges")
+    print("  ✓ FR1 trajectory overlay (red dashed line)")
+    print("  ✓ FR1 shifted to match adapted trajectories' mean position")
     print("="*70)
     
     # Construct model path
@@ -930,13 +948,13 @@ def main(model_folder=None, reg_factor=1e-4):
     model = model_data['model']
     
     # Define FR2 x-position values to test
-    fr2_x_values = np.linspace(-1.0, 1.0, 7)
+    fr2_x_values = np.linspace(-0.4, 0.4, 7)
     
     # Define FR2 y-position values to test
-    fr2_y_values = np.linspace(0.5, 0.5, 7)
+    fr2_y_values = np.linspace(-0.3, 0.3,7)
     
     # Define FR2 orientation values to test
-    fr2_theta_values = np.linspace(-25.0, 25.0, 5)
+    fr2_theta_values = np.linspace(-25.0, 25.0, 7)
     
     print(f"\n✓ Testing {len(fr2_x_values)} FR2 x-positions:")
     print(f"   Range: [{fr2_x_values[0]:.3f}, {fr2_x_values[-1]:.3f}] meters")
@@ -951,7 +969,8 @@ def main(model_folder=None, reg_factor=1e-4):
     print(f"   Step: {fr2_theta_values[1] - fr2_theta_values[0]:.3f} degrees")
     
     # Generate trajectories
-    baseline_frame_trajs, baseline_gmr, adapted_trajectories_x, adapted_trajectories_y, adapted_trajectories_theta = \
+    baseline_frame_trajs, baseline_gmr, fr1_trajectory, \
+    adapted_trajectories_x, adapted_trajectories_y, adapted_trajectories_theta = \
         generate_trajectories_with_adaptation(model, fr2_x_values, fr2_y_values, fr2_theta_values)
     
     # Create visualizations
@@ -961,19 +980,19 @@ def main(model_folder=None, reg_factor=1e-4):
     
     # Plot X-position adaptation
     plot_adaptation_test_x(
-        baseline_frame_trajs, baseline_gmr, adapted_trajectories_x,
+        baseline_frame_trajs, baseline_gmr, fr1_trajectory, adapted_trajectories_x,
         fr2_x_values, output_folder
     )
     
     # Plot Y-position adaptation
     plot_adaptation_test_y(
-        baseline_frame_trajs, baseline_gmr, adapted_trajectories_y,
+        baseline_frame_trajs, baseline_gmr, fr1_trajectory, adapted_trajectories_y,
         fr2_y_values, output_folder
     )
     
     # Plot Orientation adaptation
     plot_adaptation_test_theta(
-        baseline_frame_trajs, baseline_gmr, adapted_trajectories_theta,
+        baseline_frame_trajs, baseline_gmr, fr1_trajectory, adapted_trajectories_theta,
         fr2_theta_values, output_folder
     )
     
@@ -985,29 +1004,28 @@ def main(model_folder=None, reg_factor=1e-4):
     print(f"  1. tpgmm_adaptation_fr2_x_position.png")
     print(f"  2. tpgmm_adaptation_fr2_y_position.png")
     print(f"  3. tpgmm_adaptation_fr2_orientation.png")
-    print("The plots show:")
-    print("  - Thin colored lines: Individual frame trajectories (FR1, FR2, FR3)")
+    print("\nThe plots show:")
     print("  - Thick black line: Baseline GMR (no adaptation)")
+    print("  - Thick red dashed line: FR1 trajectory (shifted to match adapted mean)")
     print("  - Colored gradient lines: Adapted trajectories with varying FR2 parameters")
-    print("    * Blue → Red (Position):")
-    print("      - X-position: -1.0m to +1.0m")
-    print("      - Y-position: -0.3m to +0.3m")
-    print("    * Viridis (Orientation):")
-    print("      - Orientation: -15deg to +15deg")
+    print("    * Coolwarm colormap (Position): Blue (min) → Red (max)")
+    print("    * Viridis colormap (Orientation): Purple (min) → Yellow (max)")
+    print("  - Color bar: Shows parameter variation range")
     print("  - Circle: Start point")
     print("  - Square: End point")
     print("\n✓ This demonstrates TPGMM's ability to adapt trajectories based on")
     print("  task parameters (frame transformations)!")
+    print("  The FR1 trajectory overlay shows the reference frame contribution.")
     print("="*70)
 
 
 if __name__ == "__main__":
     print("\n" + "="*70)
-    print("TPGMM ADAPTATION TESTING")
+    print("TPGMM ADAPTATION TESTING (ENHANCED)")
     print("="*70)
     
     # Configuration
-    reg_factor = 1e-3  # Should match your training script
+    reg_factor = 3e-4  # Should match your training script
     model_folder = None  # Will use default: train_tpgmm_model_regXXX
     
     # Run adaptation test
