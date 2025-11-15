@@ -1123,7 +1123,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
     for i, traj in enumerate(trajectories_fr1):
         right_x = traj[:, 0]
         right_y = traj[:, 1]
-        ax.plot(right_x, right_y, '-', color='lightgray', alpha=0.2, linewidth=1)
+        ax.plot(right_x, right_y, '-', color='lightgray', alpha=0.8, linewidth=1)
     
     # Plot each Gaussian component
     for k in range(K):
@@ -1176,7 +1176,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
     for i, traj in enumerate(trajectories_fr1):
         left_x = traj[:, 5]
         left_y = traj[:, 6]
-        ax.plot(left_x, left_y, '-', color='lightgray', alpha=0.2, linewidth=1)
+        ax.plot(left_x, left_y, '-', color='lightgray', alpha=0.8, linewidth=1)
     
     # Plot each Gaussian component
     for k in range(K):
@@ -1256,7 +1256,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
     for i, traj in enumerate(trajectories_fr1):
         right_vx = traj[:, 2]
         right_vy = traj[:, 3]
-        ax.plot(right_vx, right_vy, '-', color='lightgray', alpha=0.2, linewidth=1)
+        ax.plot(right_vx, right_vy, '-', color='lightgray', alpha=0.8, linewidth=1)
     
     # Plot each Gaussian component
     for k in range(K):
@@ -1313,7 +1313,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
     for i, traj in enumerate(trajectories_fr1):
         left_vx = traj[:, 7]
         left_vy = traj[:, 8]
-        ax.plot(left_vx, left_vy, '-', color='lightgray', alpha=0.2, linewidth=1)
+        ax.plot(left_vx, left_vy, '-', color='lightgray', alpha=0.8, linewidth=1)
     
     # Plot each Gaussian component
     for k in range(K):
