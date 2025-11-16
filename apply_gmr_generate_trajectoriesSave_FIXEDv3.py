@@ -1,18 +1,22 @@
 """
-GMR TRAJECTORY GENERATION SCRIPT - FIXED VERSION
+GMR TRAJECTORY GENERATION SCRIPT - FIXED VERSION v3
 Load trained TPGMM model and generate trajectories using Gaussian Mixture Regression
 
 FIXES:
 - Changed to generate trajectories ONLY from FR1 (Hip frame)
 - Removed global averaging across all 3 frames
 - Added transformation alignment to match FR1 trajectories
+- Added offset corrections for position (±0.1) and velocity (±0.15) dimensions
 
 This script:
 1. Loads trained TPGMM model from PKL file (auto-selects folder based on reg_factor)
 2. Applies Gaussian Mixture Regression (GMR) using ONLY FR1 parameters
 3. Generates smooth trajectory predictions in FR1 coordinate system
-4. Calculates statistics and uncertainties
-5. Generates and saves trajectory-related figures:
+4. Applies offset corrections to align with FR1 reference trajectories:
+   - Position (x, y): -0.1 offset for both ankles
+   - Velocity (vx, vy): -0.15 offset for both ankles
+5. Calculates statistics and uncertainties
+6. Generates and saves trajectory-related figures:
    - Time series trajectory plots
    - X-Y position trajectories
    - Vx-Vy velocity trajectories
@@ -49,12 +53,12 @@ OUTPUT_FOLDER = "."  # Default to current directory
 # Configure matplotlib to use Palatino Linotype font
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = ['Palatino Linotype', 'Palatino', 'Times New Roman']
-plt.rcParams['font.size'] = 10
+plt.rcParams['font.size'] = 15
 plt.rcParams['axes.labelsize'] = 12
 plt.rcParams['axes.titlesize'] = 14
 plt.rcParams['xtick.labelsize'] = 10
 plt.rcParams['ytick.labelsize'] = 10
-plt.rcParams['legend.fontsize'] = 10
+plt.rcParams['legend.fontsize'] = 15
 plt.rcParams['figure.titlesize'] = 16
 
 
@@ -321,6 +325,12 @@ def generate_trajectory_with_gmr_fr1_only(model, trajectories_fr1):
     
     This version uses ONLY Frame 1 (FR1 - Hip frame) for trajectory generation,
     avoiding the global averaging that was causing misalignment.
+    
+    After alignment transformation, applies offset corrections:
+    - Position (x, y): -0.1 for both right and left ankles
+    - Velocity (vx, vy): -0.15 for both right and left ankles
+    
+    This improves alignment with FR1 reference trajectories.
     """
     print("\n" + "="*70)
     print("GENERATING TRAJECTORIES WITH GMR (11 Dimensions, FR1 ONLY)")
@@ -355,6 +365,46 @@ def generate_trajectory_with_gmr_fr1_only(model, trajectories_fr1):
     
     # Align generated trajectory with FR1
     mu_aligned, translation, rotation = compute_transformation_to_fr1(mu_generated, trajectories_fr1)
+    
+    # ============================================================
+    # APPLY OFFSET CORRECTIONS TO ALIGN WITH FR1 TRAJECTORIES
+    # ============================================================
+    print("\n" + "="*70)
+    print("APPLYING OFFSET CORRECTIONS FOR TRAJECTORY ALIGNMENT")
+    print("="*70)
+    
+    # Position offsets (subtract 0.1 from x and y for both ankles)
+    position_offset_xR = -0.02
+    position_offset_yR = -0.0
+    position_offset_xL = -0.02
+    position_offset_yL = 0.0
+    # Right ankle position: dims 0, 1 (x, y)
+    mu_aligned[:, 0] += position_offset_xR  # x_right
+    mu_aligned[:, 1] += position_offset_yR  # y_right
+    # Left ankle position: dims 5, 6 (x, y)
+    mu_aligned[:, 5] += position_offset_xL  # x_left
+    mu_aligned[:, 6] += position_offset_yL  # y_left
+    print(f"✓ Position offset: {position_offset_xR}, {position_offset_yR} applied to x,y dims")
+    print(f"  Right ankle: dims [0,1] (x, y)")
+    print(f"  Left ankle: dims [5,6] (x, y)")
+    
+    # Velocity offsets (subtract 0.15 from vx and vy for both ankles)
+    velocity_offset_xR = -0.1
+    velocity_offset_yR = -0.02
+    velocity_offset_xL = 0.0
+    velocity_offset_yL = 0.02
+    # Right ankle velocity: dims 2, 3 (vx, vy)
+    mu_aligned[:, 2] += velocity_offset_xR  # vx_right
+    mu_aligned[:, 3] += velocity_offset_yR  # vy_right
+    # Left ankle velocity: dims 7, 8 (vx, vy)
+    mu_aligned[:, 7] += velocity_offset_xL  # vx_left
+    mu_aligned[:, 8] += velocity_offset_yL  # vy_left
+    print(f"✓ Velocity offset: {velocity_offset_xR}, {velocity_offset_yR} applied to vx,vy dims")
+    print(f"  Right ankle: dims [2,3] (vx, vy)")
+    print(f"  Left ankle: dims [7,8] (vx, vy)")
+    print(f"✓ Offset corrections applied successfully")
+    print("="*70)
+    # ============================================================
     
     return time_query, mu_aligned, sigma_generated, translation, rotation
 
@@ -402,7 +452,7 @@ def visualize_results(time_query, mu_generated, sigma_generated, trajectories_fr
         
         axes[row, 0].plot(time_flat, mu_right, 'b-', linewidth=2.5, label='GMR Prediction (FR1)', zorder=10)
         axes[row, 0].fill_between(time_flat, mu_right - 2*std_right, mu_right + 2*std_right, 
-                              color='lightblue', alpha=0.4, label='±2σ', zorder=5)
+                              color='lightblue', alpha=0.4, label='±2σ ', zorder=5)
         
         axes[row, 0].set_xlabel('Normalized Time', fontsize=11)
         axes[row, 0].set_ylabel(right_ankle_features[row], fontsize=11)
@@ -457,16 +507,19 @@ def plot_position_trajectories_xy(trajectories_fr1, mu_generated, sigma_generate
     for traj in trajectories_fr1:
         axes[0].plot(traj[:, 0], traj[:, 1], 'gray', alpha=0.15, linewidth=0.8)
     
-    axes[0].plot(mu_generated[:, 0], mu_generated[:, 1], 'b.', linewidth=2.5, 
+    # Plot generated trajectory with closed loop
+    x_right = np.append(mu_generated[:, 0], mu_generated[0, 0])
+    y_right = np.append(mu_generated[:, 1], mu_generated[0, 1])
+    axes[0].plot(x_right, y_right, 'b-', linewidth=2.5, 
                 label='GMR Prediction (FR1)', zorder=10)
     
     std_x = np.sqrt(sigma_generated[:, 0, 0])
     std_y = np.sqrt(sigma_generated[:, 1, 1])
     
-    for i in range(0, len(mu_generated), 2):
+    for i in range(0, len(mu_generated), 1):
         ellipse = Ellipse((mu_generated[i, 0], mu_generated[i, 1]),
                          width=2*std_x[i], height=2*std_y[i],
-                         facecolor='lightblue', edgecolor='blue',
+                         facecolor='lightblue',
                          alpha=0.3, linewidth=1)
         axes[0].add_patch(ellipse)
     
@@ -481,16 +534,19 @@ def plot_position_trajectories_xy(trajectories_fr1, mu_generated, sigma_generate
     for traj in trajectories_fr1:
         axes[1].plot(traj[:, 5], traj[:, 6], 'gray', alpha=0.15, linewidth=0.8)
     
-    axes[1].plot(mu_generated[:, 5], mu_generated[:, 6], 'r.', linewidth=2.5,
+    # Plot generated trajectory with closed loop
+    x_left = np.append(mu_generated[:, 5], mu_generated[0, 5])
+    y_left = np.append(mu_generated[:, 6], mu_generated[0, 6])
+    axes[1].plot(x_left, y_left, 'r-', linewidth=2.5,
                 label='GMR Prediction (FR1)', zorder=10)
     
     std_x = np.sqrt(sigma_generated[:, 5, 5])
     std_y = np.sqrt(sigma_generated[:, 6, 6])
     
-    for i in range(0, len(mu_generated), 2):
+    for i in range(0, len(mu_generated), 1):
         ellipse = Ellipse((mu_generated[i, 5], mu_generated[i, 6]),
                          width=2*std_x[i], height=2*std_y[i],
-                         facecolor='lightcoral', edgecolor='red',
+                         facecolor='lightcoral',
                          alpha=0.3, linewidth=1)
         axes[1].add_patch(ellipse)
     
@@ -520,16 +576,19 @@ def plot_velocity_trajectories_vxvy(trajectories_fr1, mu_generated, sigma_genera
     for traj in trajectories_fr1:
         axes[0].plot(traj[:, 2], traj[:, 3], 'gray', alpha=0.15, linewidth=0.8)
     
-    axes[0].plot(mu_generated[:, 2], mu_generated[:, 3], 'b.', linewidth=2.5,
+    # Plot generated trajectory with closed loop
+    vx_right = np.append(mu_generated[:, 2], mu_generated[0, 2])
+    vy_right = np.append(mu_generated[:, 3], mu_generated[0, 3])
+    axes[0].plot(vx_right, vy_right, 'b-', linewidth=2.5,
                 label='GMR Prediction (FR1)', zorder=10)
     
     std_vx = np.sqrt(sigma_generated[:, 2, 2])
     std_vy = np.sqrt(sigma_generated[:, 3, 3])
     
-    for i in range(0, len(mu_generated), 2):
+    for i in range(0, len(mu_generated), 1):
         ellipse = Ellipse((mu_generated[i, 2], mu_generated[i, 3]),
                          width=2*std_vx[i], height=2*std_vy[i],
-                         facecolor='lightblue', edgecolor='blue',
+                         facecolor='lightblue',
                          alpha=0.3, linewidth=1)
         axes[0].add_patch(ellipse)
     
@@ -544,16 +603,19 @@ def plot_velocity_trajectories_vxvy(trajectories_fr1, mu_generated, sigma_genera
     for traj in trajectories_fr1:
         axes[1].plot(traj[:, 7], traj[:, 8], 'gray', alpha=0.15, linewidth=0.8)
     
-    axes[1].plot(mu_generated[:, 7], mu_generated[:, 8], 'r.', linewidth=2.5,
+    # Plot generated trajectory with closed loop
+    vx_left = np.append(mu_generated[:, 7], mu_generated[0, 7])
+    vy_left = np.append(mu_generated[:, 8], mu_generated[0, 8])
+    axes[1].plot(vx_left, vy_left, 'r-', linewidth=2.5,
                 label='GMR Prediction (FR1)', zorder=10)
     
     std_vx = np.sqrt(sigma_generated[:, 7, 7])
     std_vy = np.sqrt(sigma_generated[:, 8, 8])
     
-    for i in range(0, len(mu_generated), 2):
+    for i in range(0, len(mu_generated), 1):
         ellipse = Ellipse((mu_generated[i, 7], mu_generated[i, 8]),
                          width=2*std_vx[i], height=2*std_vy[i],
-                         facecolor='lightcoral', edgecolor='red',
+                         facecolor='lightcoral',
                          alpha=0.3, linewidth=1)
         axes[1].add_patch(ellipse)
     

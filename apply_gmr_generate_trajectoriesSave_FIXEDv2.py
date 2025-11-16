@@ -49,12 +49,12 @@ OUTPUT_FOLDER = "."  # Default to current directory
 # Configure matplotlib to use Palatino Linotype font
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = ['Palatino Linotype', 'Palatino', 'Times New Roman']
-plt.rcParams['font.size'] = 10
+plt.rcParams['font.size'] = 15
 plt.rcParams['axes.labelsize'] = 12
 plt.rcParams['axes.titlesize'] = 14
 plt.rcParams['xtick.labelsize'] = 10
 plt.rcParams['ytick.labelsize'] = 10
-plt.rcParams['legend.fontsize'] = 10
+plt.rcParams['legend.fontsize'] = 15
 plt.rcParams['figure.titlesize'] = 16
 
 
@@ -402,7 +402,7 @@ def visualize_results(time_query, mu_generated, sigma_generated, trajectories_fr
         
         axes[row, 0].plot(time_flat, mu_right, 'b-', linewidth=2.5, label='GMR Prediction (FR1)', zorder=10)
         axes[row, 0].fill_between(time_flat, mu_right - 2*std_right, mu_right + 2*std_right, 
-                              color='lightblue', alpha=0.4, label='±2σ', zorder=5)
+                              color='lightblue', alpha=0.4, label='±2σ ', zorder=5)
         
         axes[row, 0].set_xlabel('Normalized Time', fontsize=11)
         axes[row, 0].set_ylabel(right_ankle_features[row], fontsize=11)
@@ -457,16 +457,19 @@ def plot_position_trajectories_xy(trajectories_fr1, mu_generated, sigma_generate
     for traj in trajectories_fr1:
         axes[0].plot(traj[:, 0], traj[:, 1], 'gray', alpha=0.15, linewidth=0.8)
     
-    axes[0].plot(mu_generated[:, 0], mu_generated[:, 1], 'b.', linewidth=2.5, 
+    # Plot generated trajectory with closed loop
+    x_right = np.append(mu_generated[:, 0], mu_generated[0, 0])
+    y_right = np.append(mu_generated[:, 1], mu_generated[0, 1])
+    axes[0].plot(x_right, y_right, 'b-', linewidth=2.5, 
                 label='GMR Prediction (FR1)', zorder=10)
     
     std_x = np.sqrt(sigma_generated[:, 0, 0])
     std_y = np.sqrt(sigma_generated[:, 1, 1])
     
-    for i in range(0, len(mu_generated), 2):
+    for i in range(0, len(mu_generated), 1):
         ellipse = Ellipse((mu_generated[i, 0], mu_generated[i, 1]),
                          width=2*std_x[i], height=2*std_y[i],
-                         facecolor='lightblue', edgecolor='blue',
+                         facecolor='lightblue',
                          alpha=0.3, linewidth=1)
         axes[0].add_patch(ellipse)
     
@@ -481,16 +484,19 @@ def plot_position_trajectories_xy(trajectories_fr1, mu_generated, sigma_generate
     for traj in trajectories_fr1:
         axes[1].plot(traj[:, 5], traj[:, 6], 'gray', alpha=0.15, linewidth=0.8)
     
-    axes[1].plot(mu_generated[:, 5], mu_generated[:, 6], 'r.', linewidth=2.5,
+    # Plot generated trajectory with closed loop
+    x_left = np.append(mu_generated[:, 5], mu_generated[0, 5])
+    y_left = np.append(mu_generated[:, 6], mu_generated[0, 6])
+    axes[1].plot(x_left, y_left, 'r-', linewidth=2.5,
                 label='GMR Prediction (FR1)', zorder=10)
     
     std_x = np.sqrt(sigma_generated[:, 5, 5])
     std_y = np.sqrt(sigma_generated[:, 6, 6])
     
-    for i in range(0, len(mu_generated), 2):
+    for i in range(0, len(mu_generated), 1):
         ellipse = Ellipse((mu_generated[i, 5], mu_generated[i, 6]),
                          width=2*std_x[i], height=2*std_y[i],
-                         facecolor='lightcoral', edgecolor='red',
+                         facecolor='lightcoral',
                          alpha=0.3, linewidth=1)
         axes[1].add_patch(ellipse)
     
@@ -520,16 +526,19 @@ def plot_velocity_trajectories_vxvy(trajectories_fr1, mu_generated, sigma_genera
     for traj in trajectories_fr1:
         axes[0].plot(traj[:, 2], traj[:, 3], 'gray', alpha=0.15, linewidth=0.8)
     
-    axes[0].plot(mu_generated[:, 2], mu_generated[:, 3], 'b.', linewidth=2.5,
+    # Plot generated trajectory with closed loop
+    vx_right = np.append(mu_generated[:, 2], mu_generated[0, 2])
+    vy_right = np.append(mu_generated[:, 3], mu_generated[0, 3])
+    axes[0].plot(vx_right, vy_right, 'b-', linewidth=2.5,
                 label='GMR Prediction (FR1)', zorder=10)
     
     std_vx = np.sqrt(sigma_generated[:, 2, 2])
     std_vy = np.sqrt(sigma_generated[:, 3, 3])
     
-    for i in range(0, len(mu_generated), 2):
+    for i in range(0, len(mu_generated), 1):
         ellipse = Ellipse((mu_generated[i, 2], mu_generated[i, 3]),
                          width=2*std_vx[i], height=2*std_vy[i],
-                         facecolor='lightblue', edgecolor='blue',
+                         facecolor='lightblue',
                          alpha=0.3, linewidth=1)
         axes[0].add_patch(ellipse)
     
@@ -544,16 +553,19 @@ def plot_velocity_trajectories_vxvy(trajectories_fr1, mu_generated, sigma_genera
     for traj in trajectories_fr1:
         axes[1].plot(traj[:, 7], traj[:, 8], 'gray', alpha=0.15, linewidth=0.8)
     
-    axes[1].plot(mu_generated[:, 7], mu_generated[:, 8], 'r.', linewidth=2.5,
+    # Plot generated trajectory with closed loop
+    vx_left = np.append(mu_generated[:, 7], mu_generated[0, 7])
+    vy_left = np.append(mu_generated[:, 8], mu_generated[0, 8])
+    axes[1].plot(vx_left, vy_left, 'r-', linewidth=2.5,
                 label='GMR Prediction (FR1)', zorder=10)
     
     std_vx = np.sqrt(sigma_generated[:, 7, 7])
     std_vy = np.sqrt(sigma_generated[:, 8, 8])
     
-    for i in range(0, len(mu_generated), 2):
+    for i in range(0, len(mu_generated), 1):
         ellipse = Ellipse((mu_generated[i, 7], mu_generated[i, 8]),
                          width=2*std_vx[i], height=2*std_vy[i],
-                         facecolor='lightcoral', edgecolor='red',
+                         facecolor='lightcoral',
                          alpha=0.3, linewidth=1)
         axes[1].add_patch(ellipse)
     

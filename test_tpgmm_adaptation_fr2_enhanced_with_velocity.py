@@ -517,8 +517,8 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, fr1_trajectory,
     axes[0].plot(baseline_gmr[0, 0], baseline_gmr[0, 1], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[0].plot(baseline_gmr[-1, 0], baseline_gmr[-1, 1], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[0].plot(baseline_gmr[-1, 0], baseline_gmr[-1, 1], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     # 2. Plot FR1 trajectory (shifted to match adapted mean)
     # fr1_shifted_right = fr1_trajectory[:, 0:2] + fr1_displacement_right
@@ -578,8 +578,8 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, fr1_trajectory,
     axes[1].plot(baseline_gmr[0, 5], baseline_gmr[0, 6], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[1].plot(baseline_gmr[-1, 5], baseline_gmr[-1, 6], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[1].plot(baseline_gmr[-1, 5], baseline_gmr[-1, 6], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     # # 2. Plot FR1 trajectory (shifted to match adapted mean)
     # fr1_shifted_left = fr1_trajectory[:, 5:7] + fr1_displacement_left
@@ -687,8 +687,8 @@ def plot_adaptation_test_y(baseline_frame_trajs, baseline_gmr, fr1_trajectory,
     axes[0].plot(baseline_gmr[0, 0], baseline_gmr[0, 1], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[0].plot(baseline_gmr[-1, 0], baseline_gmr[-1, 1], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[0].plot(baseline_gmr[-1, 0], baseline_gmr[-1, 1], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     # # Plot FR1 trajectory
     # fr1_shifted_right = fr1_trajectory[:, 0:2] + fr1_displacement_right
@@ -741,8 +741,8 @@ def plot_adaptation_test_y(baseline_frame_trajs, baseline_gmr, fr1_trajectory,
     axes[1].plot(baseline_gmr[0, 5], baseline_gmr[0, 6], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[1].plot(baseline_gmr[-1, 5], baseline_gmr[-1, 6], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[1].plot(baseline_gmr[-1, 5], baseline_gmr[-1, 6], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     # # Plot FR1 trajectory
     # fr1_shifted_left = fr1_trajectory[:, 5:7] + fr1_displacement_left
@@ -845,8 +845,8 @@ def plot_adaptation_test_theta(baseline_frame_trajs, baseline_gmr, fr1_trajector
     axes[0].plot(baseline_gmr[0, 0], baseline_gmr[0, 1], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[0].plot(baseline_gmr[-1, 0], baseline_gmr[-1, 1], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[0].plot(baseline_gmr[-1, 0], baseline_gmr[-1, 1], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     # # Plot FR1 trajectory
     # fr1_shifted_right = fr1_trajectory[:, 0:2] + fr1_displacement_right
@@ -899,8 +899,8 @@ def plot_adaptation_test_theta(baseline_frame_trajs, baseline_gmr, fr1_trajector
     axes[1].plot(baseline_gmr[0, 5], baseline_gmr[0, 6], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[1].plot(baseline_gmr[-1, 5], baseline_gmr[-1, 6], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[1].plot(baseline_gmr[-1, 5], baseline_gmr[-1, 6], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     # # Plot FR1 trajectory
     # fr1_shifted_left = fr1_trajectory[:, 5:7] + fr1_displacement_left
@@ -986,8 +986,8 @@ def plot_adaptation_test_x_velocity(baseline_frame_trajs, baseline_gmr, fr1_traj
     axes[0].plot(baseline_gmr[0, 2], baseline_gmr[0, 3], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[0].plot(baseline_gmr[-1, 2], baseline_gmr[-1, 3], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[0].plot(baseline_gmr[-1, 2], baseline_gmr[-1, 3], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     for i, (adapted_traj, fr2_x, color) in enumerate(zip(adapted_trajectories, fr2_x_values, adapt_colors)):
         label = f'FR2_x = {fr2_x:+.3f}m (min)' if i == 0 else (f'FR2_x = {fr2_x:+.3f}m (max)' if i == len(adapted_trajectories) - 1 else None)
@@ -1012,8 +1012,8 @@ def plot_adaptation_test_x_velocity(baseline_frame_trajs, baseline_gmr, fr1_traj
     axes[1].plot(baseline_gmr[0, 7], baseline_gmr[0, 8], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[1].plot(baseline_gmr[-1, 7], baseline_gmr[-1, 8], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[1].plot(baseline_gmr[-1, 7], baseline_gmr[-1, 8], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     for i, (adapted_traj, fr2_x, color) in enumerate(zip(adapted_trajectories, fr2_x_values, adapt_colors)):
         label = f'FR2_x = {fr2_x:+.3f}m (min)' if i == 0 else (f'FR2_x = {fr2_x:+.3f}m (max)' if i == len(adapted_trajectories) - 1 else None)
@@ -1071,8 +1071,8 @@ def plot_adaptation_test_y_velocity(baseline_frame_trajs, baseline_gmr, fr1_traj
     axes[0].plot(baseline_gmr[0, 2], baseline_gmr[0, 3], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[0].plot(baseline_gmr[-1, 2], baseline_gmr[-1, 3], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[0].plot(baseline_gmr[-1, 2], baseline_gmr[-1, 3], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     for i, (adapted_traj, fr2_y, color) in enumerate(zip(adapted_trajectories, fr2_y_values, adapt_colors)):
         label = f'FR2_y = {fr2_y:+.3f}m (min)' if i == 0 else (f'FR2_y = {fr2_y:+.3f}m (max)' if i == len(adapted_trajectories) - 1 else None)
@@ -1097,8 +1097,8 @@ def plot_adaptation_test_y_velocity(baseline_frame_trajs, baseline_gmr, fr1_traj
     axes[1].plot(baseline_gmr[0, 7], baseline_gmr[0, 8], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[1].plot(baseline_gmr[-1, 7], baseline_gmr[-1, 8], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[1].plot(baseline_gmr[-1, 7], baseline_gmr[-1, 8], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     for i, (adapted_traj, fr2_y, color) in enumerate(zip(adapted_trajectories, fr2_y_values, adapt_colors)):
         label = f'FR2_y = {fr2_y:+.3f}m (min)' if i == 0 else (f'FR2_y = {fr2_y:+.3f}m (max)' if i == len(adapted_trajectories) - 1 else None)
@@ -1156,8 +1156,8 @@ def plot_adaptation_test_theta_velocity(baseline_frame_trajs, baseline_gmr, fr1_
     axes[0].plot(baseline_gmr[0, 2], baseline_gmr[0, 3], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[0].plot(baseline_gmr[-1, 2], baseline_gmr[-1, 3], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[0].plot(baseline_gmr[-1, 2], baseline_gmr[-1, 3], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     for i, (adapted_traj, fr2_theta, color) in enumerate(zip(adapted_trajectories, fr2_theta_values, adapt_colors)):
         label = f'FR2_θ = {fr2_theta:+.2f}° (min)' if i == 0 else (f'FR2_θ = {fr2_theta:+.2f}° (max)' if i == len(adapted_trajectories) - 1 else None)
@@ -1182,8 +1182,8 @@ def plot_adaptation_test_theta_velocity(baseline_frame_trajs, baseline_gmr, fr1_
     axes[1].plot(baseline_gmr[0, 7], baseline_gmr[0, 8], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
                 label='Start/End points')
-    axes[1].plot(baseline_gmr[-1, 7], baseline_gmr[-1, 8], 'ks', 
-                markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
+    # axes[1].plot(baseline_gmr[-1, 7], baseline_gmr[-1, 8], 'ks', 
+    #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
     for i, (adapted_traj, fr2_theta, color) in enumerate(zip(adapted_trajectories, fr2_theta_values, adapt_colors)):
         label = f'FR2_θ = {fr2_theta:+.2f}° (min)' if i == 0 else (f'FR2_θ = {fr2_theta:+.2f}° (max)' if i == len(adapted_trajectories) - 1 else None)

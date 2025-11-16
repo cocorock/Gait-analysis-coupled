@@ -46,7 +46,7 @@ OUTPUT_FOLDER = "."  # Default to current directory
 # Configure matplotlib to use Palatino Linotype font
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = ['Palatino Linotype', 'Palatino', 'Times New Roman']
-plt.rcParams['font.size'] = 10
+plt.rcParams['font.size'] = 40
 plt.rcParams['axes.labelsize'] = 12
 plt.rcParams['axes.titlesize'] = 14
 plt.rcParams['xtick.labelsize'] = 10
@@ -615,11 +615,13 @@ def extract_trajectories(data, subsample_factor=2):
         right_ankle_pos = np.array(demo_fr1['right_ankle_pos'])
         right_ankle_vel = np.array(demo_fr1['right_ankle_vel'])
         ankle_right_deg = np.array(demo_fr1['ankle_right_deg'])
+        right_shank_deg = np.array(demo_fr1['right_shank_deg']) # Not used 
         
         # Left ankle data is also in the right_leg_kinematics section
         left_ankle_pos = np.array(demo_fr1['left_ankle_pos'])
         left_ankle_vel = np.array(demo_fr1['left_ankle_vel'])
         ankle_left_deg = np.array(demo_fr1['ankle_left_deg'])
+        right_shank_deg = np.array(demo_fr1['right_shank_deg']) # Not used 
         
         n_points = right_ankle_pos.shape[1]
         indices = np.arange(0, n_points, subsample_factor)
@@ -741,7 +743,7 @@ def visualize_bic_results(results):
     best_idx = np.argmin(results['bic'])
     ax1.plot(results['n_components'][best_idx], results['bic'][best_idx], 
              'r*', markersize=20, label=f'Best Model: {results["n_components"][best_idx]}')
-    ax1.set_xlabel('Number of Components (K)', fontsize=12)
+    ax1.set_xlabel('Number of Components (P)', fontsize=12)
     ax1.set_ylabel('BIC Score', fontsize=12)
     ax1.set_title('OPTIMIZED Model Selection: BIC (11 Dimensions)', fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3)
@@ -750,7 +752,7 @@ def visualize_bic_results(results):
     ax2.plot(results['n_components'], results['log_likelihood'], 'go-', linewidth=2, markersize=8)
     ax2.plot(results['n_components'][best_idx], results['log_likelihood'][best_idx], 
              'r*', markersize=20, label=f'Best Model: {results["n_components"][best_idx]}')
-    ax2.set_xlabel('Number of Components (K)', fontsize=12)
+    ax2.set_xlabel('Number of Components (P)', fontsize=12)
     ax2.set_ylabel('Log-Likelihood', fontsize=12)
     ax2.set_title('Final Log-Likelihood (11 Dimensions)', fontsize=14, fontweight='bold')
     ax2.grid(True, alpha=0.3)
@@ -1136,7 +1138,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
         covar_xy = covar[[0, 1], :][:, [0, 1]]
         
         # Plot the mean
-        ax.plot(mean_xy[0], mean_xy[1], 'o', color=colors[k], markersize=10, 
+        ax.plot(mean_xy[0], mean_xy[1], 'o', color=colors[k], markersize=16, 
                zorder=10, markeredgecolor='black', markeredgewidth=1.5)
         
         # Compute eigenvalues and eigenvectors for ellipse
@@ -1153,7 +1155,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
         
         # Add component label
         ax.text(mean_xy[0], mean_xy[1], f'{k+1}', 
-               fontsize=8, ha='center', va='center', 
+               fontsize=15, ha='center', va='center', 
                color='white', fontweight='bold', zorder=11)
     
     ax.set_xlabel('X Position (m)', fontsize=13, fontweight='bold')
@@ -1189,7 +1191,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
         covar_xy = covar[[5, 6], :][:, [5, 6]]
         
         # Plot the mean
-        ax.plot(mean_xy[0], mean_xy[1], 'o', color=colors[k], markersize=10, 
+        ax.plot(mean_xy[0], mean_xy[1], 'o', color=colors[k], markersize=16, 
                zorder=10, markeredgecolor='black', markeredgewidth=1.5)
         
         # Compute eigenvalues and eigenvectors for ellipse
@@ -1206,7 +1208,7 @@ def plot_gaussian_components_position(best_model, trajectories_fr1):
         
         # Add component label
         ax.text(mean_xy[0], mean_xy[1], f'{k+1}', 
-               fontsize=8, ha='center', va='center', 
+               fontsize=15, ha='center', va='center', 
                color='white', fontweight='bold', zorder=11)
     
     ax.set_xlabel('X Position (m)', fontsize=13, fontweight='bold')
@@ -1269,7 +1271,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
         covar_vxvy = covar[[2, 3], :][:, [2, 3]]
         
         # Plot the mean
-        ax.plot(mean_vxvy[0], mean_vxvy[1], 'o', color=colors[k], markersize=10, 
+        ax.plot(mean_vxvy[0], mean_vxvy[1], 'o', color=colors[k], markersize=16, 
                zorder=10, markeredgecolor='black', markeredgewidth=1.5)
         
         # Compute eigenvalues and eigenvectors for ellipse
@@ -1286,7 +1288,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
         
         # Add component label
         ax.text(mean_vxvy[0], mean_vxvy[1], f'{k+1}', 
-               fontsize=8, ha='center', va='center', 
+               fontsize=15, ha='center', va='center', 
                color='white', fontweight='bold', zorder=11)
     
     # Add origin lines
@@ -1326,7 +1328,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
         covar_vxvy = covar[[7, 8], :][:, [7, 8]]
         
         # Plot the mean
-        ax.plot(mean_vxvy[0], mean_vxvy[1], 'o', color=colors[k], markersize=10, 
+        ax.plot(mean_vxvy[0], mean_vxvy[1], 'o', color=colors[k], markersize=16, 
                zorder=10, markeredgecolor='black', markeredgewidth=1.5)
         
         # Compute eigenvalues and eigenvectors for ellipse
@@ -1343,7 +1345,7 @@ def plot_gaussian_components_velocity(best_model, trajectories_fr1):
         
         # Add component label
         ax.text(mean_vxvy[0], mean_vxvy[1], f'{k+1}', 
-               fontsize=8, ha='center', va='center', 
+               fontsize=15, ha='center', va='center', 
                color='white', fontweight='bold', zorder=11)
     
     # Add origin lines
