@@ -1587,7 +1587,7 @@ if __name__ == "__main__":
     print("Trajectory generation (GMR) is done separately.\n")
     
     # Configuration
-    data_path = "TaskPaGMMM\\examples\\7days1\\gait_analysis_export_subject35v6.json"
+    data_path = "TaskPaGMMM\\examples\\7days1\\gait_analysis_export_subject35v5.json"
     subsample_factor = 1  # Adjust as needed
     n_jobs = -1  # Use all CPU cores (only used if use_parallel=True)
     

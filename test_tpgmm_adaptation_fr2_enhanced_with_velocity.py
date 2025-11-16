@@ -527,31 +527,31 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, fr1_trajectory,
     #             zorder=5)
     
     # 3. Plot adapted trajectories (colored gradient)
-    for i, (adapted_traj, fr2_x, color) in enumerate(
-        zip(adapted_trajectories, fr2_x_values, adapt_colors)
-    ):
-        # Only label first and last
-        if i == 0:
-            label = f'FR2_x = {fr2_x:+.2f}m (min)'
-        elif i == len(adapted_trajectories) - 1:
-            label = f'FR2_x = {fr2_x:+.2f}m (max)'
-        else:
-            label = None
+    # for i, (adapted_traj, fr2_x, color) in enumerate(
+    #     zip(adapted_trajectories, fr2_x_values, adapt_colors)
+    # ):
+    #     # Only label first and last
+    #     if i == 0:
+    #         label = f'FR2_x = {fr2_x:+.2f}m (min)'
+    #     elif i == len(adapted_trajectories) - 1:
+    #         label = f'FR2_x = {fr2_x:+.2f}m (max)'
+    #     else:
+    #         label = None
         
-        # Calculate displacement from baseline's mean position and anti-transform
-        baseline_mean = np.mean(baseline_gmr[:, 0:2], axis=0)
-        adapted_mean = np.mean(adapted_traj[:, 0:2], axis=0)
-        displacement = [0 , 0]#adapted_mean - baseline_mean
+    #     # Calculate displacement from baseline's mean position and anti-transform
+    #     baseline_mean = np.mean(baseline_gmr[:, 0:2], axis=0)
+    #     adapted_mean = np.mean(adapted_traj[:, 0:2], axis=0)
+    #     displacement = [0 , 0]#adapted_mean - baseline_mean
         
-        # Close the trajectory
-        x_adapted = adapted_traj[:, 0] - displacement[0]
-        y_adapted = adapted_traj[:, 1] - displacement[1]
-        x_closed = np.append(x_adapted, x_adapted[0])
-        y_closed = np.append(y_adapted, y_adapted[0])
+    #     # Close the trajectory
+    #     x_adapted = adapted_traj[:, 0] - displacement[0]
+    #     y_adapted = adapted_traj[:, 1] - displacement[1]
+    #     x_closed = np.append(x_adapted, x_adapted[0])
+    #     y_closed = np.append(y_adapted, y_adapted[0])
         
-        axes[0].plot(x_closed, y_closed,
-                   color=color, linewidth=1.0, alpha=0.7,
-                   label=label, zorder=4)
+    #     axes[0].plot(x_closed, y_closed,
+    #                color=color, linewidth=1.0, alpha=0.7,
+    #                label=label, zorder=4)
     
     # Configure right ankle plot
     axes[0].set_xlabel('X Position (m)', fontsize=13, fontweight='bold')
@@ -588,30 +588,30 @@ def plot_adaptation_test_x(baseline_frame_trajs, baseline_gmr, fr1_trajectory,
     #             zorder=5)
     
     # 3. Plot adapted trajectories
-    for i, (adapted_traj, fr2_x, color) in enumerate(
-        zip(adapted_trajectories, fr2_x_values, adapt_colors)
-    ):
-        if i == 0:
-            label = f'FR2_x = {fr2_x:+.2f}m (min)'
-        elif i == len(adapted_trajectories) - 1:
-            label = f'FR2_x = {fr2_x:+.2f}m (max)'
-        else:
-            label = None
+    # for i, (adapted_traj, fr2_x, color) in enumerate(
+    #     zip(adapted_trajectories, fr2_x_values, adapt_colors)
+    # ):
+    #     if i == 0:
+    #         label = f'FR2_x = {fr2_x:+.2f}m (min)'
+    #     elif i == len(adapted_trajectories) - 1:
+    #         label = f'FR2_x = {fr2_x:+.2f}m (max)'
+    #     else:
+    #         label = None
         
-        # Calculate displacement from baseline's mean position and anti-transform
-        baseline_mean = np.mean(baseline_gmr[:, 5:7], axis=0)
-        adapted_mean = np.mean(adapted_traj[:, 5:7], axis=0)
-        displacement = [0 , 0]#0#adapted_mean - baseline_mean
+    #     Calculate displacement from baseline's mean position and anti-transform
+    #     baseline_mean = np.mean(baseline_gmr[:, 5:7], axis=0)
+    #     adapted_mean = np.mean(adapted_traj[:, 5:7], axis=0)
+    #     displacement = [0 , 0]#0#adapted_mean - baseline_mean
         
-        # Close the trajectory
-        x_adapted = adapted_traj[:, 5] - displacement[0]
-        y_adapted = adapted_traj[:, 6] - displacement[1]
-        x_closed = np.append(x_adapted, x_adapted[0])
-        y_closed = np.append(y_adapted, y_adapted[0])
+    #     Close the trajectory
+    #     x_adapted = adapted_traj[:, 5] - displacement[0]
+    #     y_adapted = adapted_traj[:, 6] - displacement[1]
+    #     x_closed = np.append(x_adapted, x_adapted[0])
+    #     y_closed = np.append(y_adapted, y_adapted[0])
         
-        axes[1].plot(x_closed, y_closed,
-                   color=color, linewidth=1.0, alpha=0.7,
-                   label=label, zorder=4)
+    #     axes[1].plot(x_closed, y_closed,
+    #                color=color, linewidth=1.0, alpha=0.7,
+    #                label=label, zorder=4)
     
     # Configure left ankle plot
     axes[1].set_xlabel('X Position (m)', fontsize=13, fontweight='bold')
@@ -985,16 +985,16 @@ def plot_adaptation_test_x_velocity(baseline_frame_trajs, baseline_gmr, fr1_traj
                 zorder=5, alpha=0.8)
     axes[0].plot(baseline_gmr[0, 2], baseline_gmr[0, 3], 'ko', 
                 markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5,
-                label='Start/End points')
+                label='Start point')
     # axes[0].plot(baseline_gmr[-1, 2], baseline_gmr[-1, 3], 'ks', 
     #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
-    for i, (adapted_traj, fr2_x, color) in enumerate(zip(adapted_trajectories, fr2_x_values, adapt_colors)):
-        label = f'FR2_x = {fr2_x:+.3f}m (min)' if i == 0 else (f'FR2_x = {fr2_x:+.3f}m (max)' if i == len(adapted_trajectories) - 1 else None)
-        # Close the trajectory
-        x_closed = np.append(adapted_traj[:, 2], adapted_traj[0, 2])
-        y_closed = np.append(adapted_traj[:, 3], adapted_traj[0, 3])
-        axes[0].plot(x_closed, y_closed, color=color, linewidth=1.0, alpha=0.7, label=label, zorder=4)
+    # for i, (adapted_traj, fr2_x, color) in enumerate(zip(adapted_trajectories, fr2_x_values, adapt_colors)):
+    #     label = f'FR2_x = {fr2_x:+.3f}m (min)' if i == 0 else (f'FR2_x = {fr2_x:+.3f}m (max)' if i == len(adapted_trajectories) - 1 else None)
+    #     # Close the trajectory
+    #     x_closed = np.append(adapted_traj[:, 2], adapted_traj[0, 2])
+    #     y_closed = np.append(adapted_traj[:, 3], adapted_traj[0, 3])
+    #     axes[0].plot(x_closed, y_closed, color=color, linewidth=1.0, alpha=0.7, label=label, zorder=4)
     
     axes[0].set_xlabel('X Velocity (m/s)', fontsize=13, fontweight='bold')
     axes[0].set_ylabel('Y Velocity (m/s)', fontsize=13, fontweight='bold')
@@ -1015,12 +1015,12 @@ def plot_adaptation_test_x_velocity(baseline_frame_trajs, baseline_gmr, fr1_traj
     # axes[1].plot(baseline_gmr[-1, 7], baseline_gmr[-1, 8], 'ks', 
     #             markersize=10, zorder=6, markeredgecolor='white', markeredgewidth=1.5)
     
-    for i, (adapted_traj, fr2_x, color) in enumerate(zip(adapted_trajectories, fr2_x_values, adapt_colors)):
-        label = f'FR2_x = {fr2_x:+.3f}m (min)' if i == 0 else (f'FR2_x = {fr2_x:+.3f}m (max)' if i == len(adapted_trajectories) - 1 else None)
-        # Close the trajectory
-        x_closed = np.append(adapted_traj[:, 7], adapted_traj[0, 7])
-        y_closed = np.append(adapted_traj[:, 8], adapted_traj[0, 8])
-        axes[1].plot(x_closed, y_closed, color=color, linewidth=1.0, alpha=0.7, label=label, zorder=4)
+    # for i, (adapted_traj, fr2_x, color) in enumerate(zip(adapted_trajectories, fr2_x_values, adapt_colors)):
+    #     label = f'FR2_x = {fr2_x:+.3f}m (min)' if i == 0 else (f'FR2_x = {fr2_x:+.3f}m (max)' if i == len(adapted_trajectories) - 1 else None)
+    #     # Close the trajectory
+    #     x_closed = np.append(adapted_traj[:, 7], adapted_traj[0, 7])
+    #     y_closed = np.append(adapted_traj[:, 8], adapted_traj[0, 8])
+    #     axes[1].plot(x_closed, y_closed, color=color, linewidth=1.0, alpha=0.7, label=label, zorder=4)
     
     axes[1].set_xlabel('X Velocity (m/s)', fontsize=13, fontweight='bold')
     axes[1].set_ylabel('Y Velocity (m/s)', fontsize=13, fontweight='bold')
