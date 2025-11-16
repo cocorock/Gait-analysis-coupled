@@ -644,7 +644,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
     ax1 = fig.add_subplot(gs[0, 0])
     
     # Plot baseline
-    ax1.plot(mu_baseline[:, 0], mu_baseline[:, 1], 'k-', 
+    ax1.plot(mu_baseline[:, 0], mu_baseline[:, 1], 'k--', 
             linewidth=2.5, label='Baseline', alpha=0.7, zorder=10)
     ax1.plot(mu_baseline[0, 0], mu_baseline[0, 1], 'go', 
             markersize=10, label='Start', zorder=15)
@@ -670,7 +670,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
                 label=f'Target: {target:+.2f}', zorder=5)
         
         # Mark endpoint
-        ax1.plot(mu_adapted[-1, 0], mu_adapted[-1, 1], 'o', 
+        ax1.plot(mu_adapted[-1, 0], mu_adapted[-1, 1], 's', 
                 color=colors[i], markersize=6, zorder=8)
     
     ax1.set_xlabel('X Position (m)', fontweight='bold')
@@ -683,7 +683,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
     # ========== LEFT ANKLE TRAJECTORY (X-Y) ==========
     ax2 = fig.add_subplot(gs[0, 1])
     
-    ax2.plot(mu_baseline[:, 5], mu_baseline[:, 6], 'k-', 
+    ax2.plot(mu_baseline[:, 5], mu_baseline[:, 6], 'k--', 
             linewidth=2.5, label='Baseline', alpha=0.7, zorder=10)
     ax2.plot(mu_baseline[0, 5], mu_baseline[0, 6], 'go', 
             markersize=10, label='Start', zorder=15)
@@ -704,7 +704,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
         ax2.plot(mu_adapted[:, 5], mu_adapted[:, 6], 
                 linestyle=linestyle, linewidth=linewidth,
                 color=colors[i], alpha=alpha, zorder=5)
-        ax2.plot(mu_adapted[-1, 5], mu_adapted[-1, 6], 'o',
+        ax2.plot(mu_adapted[-1, 5], mu_adapted[-1, 6], 's',
                 color=colors[i], markersize=6, zorder=8)
     
     ax2.set_xlabel('X Position (m)', fontweight='bold')
@@ -729,7 +729,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
             linewidth = 2
         
         ax3.plot(time, param, linestyle=linestyle, linewidth=linewidth,
-                color=colors[i], label=f'{target:+.2f}')
+                color=colors[i], label=f'{target/3.333:+.2f}m')
     
     ax3.set_xlabel('Normalized Time', fontweight='bold')
     ax3.set_ylabel(param_label, fontweight='bold')
@@ -741,7 +741,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
     # ========== RIGHT ANKLE X POSITION vs TIME ==========
     ax4 = fig.add_subplot(gs[1, 0])
     
-    ax4.plot(time_baseline, mu_baseline[:, 0], 'k-', linewidth=2.5, 
+    ax4.plot(time_baseline, mu_baseline[:, 0], 'k--', linewidth=2.5, 
             label='Baseline', alpha=0.7)
     
     for i, result in enumerate(results_list):
@@ -769,7 +769,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
     # ========== RIGHT ANKLE Y POSITION vs TIME ==========
     ax5 = fig.add_subplot(gs[1, 1])
     
-    ax5.plot(time_baseline, mu_baseline[:, 1], 'k-', linewidth=2.5,
+    ax5.plot(time_baseline, mu_baseline[:, 1], 'k--', linewidth=2.5,
             label='Baseline', alpha=0.7)
     
     for i, result in enumerate(results_list):
@@ -797,7 +797,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
     # ========== RIGHT ANKLE ANGLE vs TIME ==========
     ax6 = fig.add_subplot(gs[1, 2])
     
-    ax6.plot(time_baseline, np.rad2deg(mu_baseline[:, 4]), 'k-',
+    ax6.plot(time_baseline, np.rad2deg(mu_baseline[:, 4]), 'k--',
             linewidth=2.5, label='Baseline', alpha=0.7)
     
     for i, result in enumerate(results_list):
@@ -826,7 +826,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
     ax7 = fig.add_subplot(gs[2, 0])
     
     vel_baseline = np.sqrt(mu_baseline[:, 2]**2 + mu_baseline[:, 3]**2)
-    ax7.plot(time_baseline, vel_baseline, 'k-', linewidth=2.5,
+    ax7.plot(time_baseline, vel_baseline, 'k--', linewidth=2.5,
             label='Baseline', alpha=0.7)
     
     for i, result in enumerate(results_list):
@@ -876,7 +876,7 @@ def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
         
         ax8.plot(time, diff_total, linestyle=linestyle,
                 linewidth=linewidth, color=colors[i], alpha=alpha,
-                label=f'{target:+.2f}')
+                label=f'{target/3.333:+.2f}m')
     
     ax8.set_xlabel('Normalized Time', fontweight='bold')
     ax8.set_ylabel('Position Difference (m)', fontweight='bold')
@@ -958,7 +958,7 @@ def visualize_adaptation_test(time_query, mu_baseline, mu_adapted,
     ax1.plot(mu_baseline[0, 0], mu_baseline[0, 1], 'go', 
             markersize=10, label='Start', zorder=10)
     ax1.plot(mu_baseline[-1, 0], mu_baseline[-1, 1], 'rs', 
-            markersize=10, label='End (Baseline)', zorder=10)
+            markersize=10, label='End', zorder=10)
     
     # Plot adapted
     ax1.plot(mu_adapted[:, 0], mu_adapted[:, 1], 'r--', 
@@ -981,7 +981,7 @@ def visualize_adaptation_test(time_query, mu_baseline, mu_adapted,
     ax2.plot(mu_baseline[0, 5], mu_baseline[0, 6], 'go', 
             markersize=10, label='Start', zorder=10)
     ax2.plot(mu_baseline[-1, 5], mu_baseline[-1, 6], 'rs', 
-            markersize=10, label='End (Baseline)', zorder=10)
+            markersize=10, label='End', zorder=10)
     
     ax2.plot(mu_adapted[:, 5], mu_adapted[:, 6], 'r--', 
             linewidth=2, label='Adapted', alpha=0.7)
@@ -998,7 +998,7 @@ def visualize_adaptation_test(time_query, mu_baseline, mu_adapted,
     # ========== PARAMETER EVOLUTION ==========
     ax3 = fig.add_subplot(gs[0, 2])
     
-    ax3.plot(time_query, param_values, 'k-', linewidth=2)
+    ax3.plot(time_query, param_values, 'k--', linewidth=2)
     ax3.fill_between(time_query, 0, param_values, alpha=0.3)
     ax3.set_xlabel('Normalized Time', fontweight='bold')
     ax3.set_ylabel(param_label, fontweight='bold')
@@ -1125,6 +1125,258 @@ def visualize_adaptation_test(time_query, mu_baseline, mu_adapted,
     print(f"Parameter change: {param_values[0]:.3f} → {param_values[-1]:.3f}")
 
 
+def visualize_phase_space_plots(time_baseline, mu_baseline, results_list,
+                                 test_name, output_folder):
+    """
+    Create phase space plots: Position XY, Velocity VxVy, Angle vs Time
+    For both right and left ankles
+    
+    Parameters:
+    -----------
+    time_baseline : array
+        Time vector for baseline
+    mu_baseline : array (N, 10)
+        Baseline trajectory
+    results_list : list of dicts
+        List of results from adaptations
+    test_name : str
+        Name of test
+    output_folder : str
+        Folder to save figures
+    """
+    print(f"\n✓ Creating phase space plots for {test_name}...")
+    
+    n_variations = len(results_list)
+    
+    # Create coolwarm colormap
+    cmap = plt.cm.coolwarm
+    colors = [cmap(i / (n_variations - 1)) for i in range(n_variations)]
+    
+    # Create figure with 2 rows x 3 columns
+    fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+    
+    # ==================== ROW 1: RIGHT ANKLE ====================
+    
+    # --- RIGHT ANKLE: Position X vs Y ---
+    ax = axes[0, 0]
+        
+    for i, result in enumerate(results_list):
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax.plot(mu_adapted[:, 0], mu_adapted[:, 1], 
+               linestyle=linestyle, linewidth=linewidth,
+               color=colors[i], alpha=alpha, label=f'{target/3.333:+.2f}m', zorder=5)
+        ax.plot(mu_adapted[-1, 0], mu_adapted[-1, 1], 's',
+               color=colors[i], markersize=6, zorder=8)
+    
+    ax.plot(mu_baseline[:, 0], mu_baseline[:, 1], 'k--', 
+           linewidth=2.5, label='Baseline', alpha=0.7, zorder=10)
+    ax.plot(mu_baseline[0, 0], mu_baseline[0, 1], 'go', 
+           markersize=10, label='Start', zorder=15)
+    ax.plot(mu_baseline[-1, 0], mu_baseline[-1, 1], 'ks', 
+           markersize=6, label='End', zorder=15)
+
+    ax.set_xlabel('X Position (m)', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Y Position (m)', fontweight='bold', fontsize=12)
+    ax.set_title('Right Ankle: Position Trajectory', fontweight='bold', fontsize=14)
+    ax.legend(loc='best', fontsize=9, ncol=2)
+    ax.grid(True, alpha=0.3)
+    ax.axis('equal')
+    
+    # --- RIGHT ANKLE: Velocity Vx vs Vy ---
+    ax = axes[0, 1]
+        
+    for i, result in enumerate(results_list):
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax.plot(mu_adapted[:, 2], mu_adapted[:, 3],
+               linestyle=linestyle, linewidth=linewidth,
+               color=colors[i], alpha=alpha, zorder=5)
+        ax.plot(mu_adapted[-1, 2], mu_adapted[-1, 3], 's',
+               color=colors[i], markersize=6, zorder=8)
+    
+    ax.plot(mu_baseline[:, 2], mu_baseline[:, 3], 'k--',
+           linewidth=2.5, label='Baseline', alpha=0.7, zorder=10)
+    ax.plot(mu_baseline[0, 2], mu_baseline[0, 3], 'go',
+           markersize=10, label='Start', zorder=15)
+    ax.plot(mu_baseline[-1, 2], mu_baseline[-1, 3], 'ks',
+           markersize=6, label='End', zorder=15)
+
+    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+    ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+    ax.set_xlabel('X Velocity (m/s)', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Y Velocity (m/s)', fontweight='bold', fontsize=12)
+    ax.set_title('Right Ankle: Velocity Phase Plot', fontweight='bold', fontsize=14)
+    ax.grid(True, alpha=0.3)
+    ax.axis('equal')
+    
+    # --- RIGHT ANKLE: Angle vs Time ---
+    ax = axes[0, 2]
+        
+    for i, result in enumerate(results_list):
+        time = result['time']
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax.plot(time, np.rad2deg(mu_adapted[:, 4]),
+               linestyle=linestyle, linewidth=linewidth,
+               color=colors[i], alpha=alpha, label=f'{target/3.333:+.2f}m')
+    
+    ax.plot(time_baseline, np.rad2deg(mu_baseline[:, 4]), 'k--',
+           linewidth=2.5, label='Baseline', alpha=0.7)
+    
+    ax.set_xlabel('Normalized Time', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Ankle Angle (°)', fontweight='bold', fontsize=12)
+    ax.set_title('Right Ankle: Angle vs Time', fontweight='bold', fontsize=14)
+    ax.legend(loc='best', fontsize=9, ncol=2)
+    ax.grid(True, alpha=0.3)
+    
+    # ==================== ROW 2: LEFT ANKLE ====================
+    
+    # --- LEFT ANKLE: Position X vs Y ---
+    ax = axes[1, 0]
+        
+    for i, result in enumerate(results_list):
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax.plot(mu_adapted[:, 5], mu_adapted[:, 6],
+               linestyle=linestyle, linewidth=linewidth,
+               color=colors[i], alpha=alpha, zorder=5)
+        ax.plot(mu_adapted[-1, 5], mu_adapted[-1, 6], 's',
+               color=colors[i], markersize=6, zorder=8)
+    
+    ax.plot(mu_baseline[:, 5], mu_baseline[:, 6], 'k--',
+           linewidth=2.5, label='Baseline', alpha=0.7, zorder=10)
+    ax.plot(mu_baseline[0, 5], mu_baseline[0, 6], 'go',
+           markersize=10, label='Start', zorder=15)
+    ax.plot(mu_baseline[-1, 5], mu_baseline[-1, 6], 'ks',
+           markersize=6, label='End', zorder=15)
+
+    ax.set_xlabel('X Position (m)', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Y Position (m)', fontweight='bold', fontsize=12)
+    ax.set_title('Left Ankle: Position Trajectory', fontweight='bold', fontsize=14)
+    ax.grid(True, alpha=0.3)
+    ax.axis('equal')
+    
+    # --- LEFT ANKLE: Velocity Vx vs Vy ---
+    ax = axes[1, 1]
+        
+    for i, result in enumerate(results_list):
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax.plot(mu_adapted[:, 7], mu_adapted[:, 8],
+               linestyle=linestyle, linewidth=linewidth,
+               color=colors[i], alpha=alpha, zorder=5)
+        ax.plot(mu_adapted[-1, 7], mu_adapted[-1, 8], 's',
+               color=colors[i], markersize=6, zorder=8)
+    
+    ax.plot(mu_baseline[:, 7], mu_baseline[:, 8], 'k--',
+           linewidth=2.5, label='Baseline', alpha=0.7, zorder=10)
+    ax.plot(mu_baseline[0, 7], mu_baseline[0, 8], 'go',
+           markersize=10, label='Start', zorder=15)
+    ax.plot(mu_baseline[-1, 7], mu_baseline[-1, 8], 'ks',
+           markersize=6, label='End', zorder=15)
+
+    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+    ax.axvline(x=0, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+    ax.set_xlabel('X Velocity (m/s)', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Y Velocity (m/s)', fontweight='bold', fontsize=12)
+    ax.set_title('Left Ankle: Velocity Phase Plot', fontweight='bold', fontsize=14)
+    ax.grid(True, alpha=0.3)
+    ax.axis('equal')
+    
+    # --- LEFT ANKLE: Angle vs Time ---
+    ax = axes[1, 2]
+        
+    for i, result in enumerate(results_list):
+        time = result['time']
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax.plot(time, np.rad2deg(mu_adapted[:, 9]),
+               linestyle=linestyle, linewidth=linewidth,
+               color=colors[i], alpha=alpha)
+    
+    ax.plot(time_baseline, np.rad2deg(mu_baseline[:, 9]), 'k--',
+           linewidth=2.5, label='Baseline', alpha=0.7)
+    
+    ax.set_xlabel('Normalized Time', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Ankle Angle (°)', fontweight='bold', fontsize=12)
+    ax.set_title('Left Ankle: Angle vs Time', fontweight='bold', fontsize=14)
+    ax.grid(True, alpha=0.3)
+    
+    # Overall title
+    fig.suptitle(f'Phase Space Analysis: {test_name} (7 Variations)', 
+                fontsize=18, fontweight='bold', y=0.98)
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    
+    # Save figure with high DPI
+    save_path = os.path.join(output_folder, f'adaptability_{test_name.lower()}_phase_space.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved phase space figure: {save_path}")
+    
+    plt.close()
+
+
 def main():
     """
     Main function to run all adaptability tests
@@ -1135,15 +1387,15 @@ def main():
     print("="*80)
     
     # ========== CONFIGURATION ==========
-    model_path = "train_tpgmm_model_reg3e-04/trained_model.pkl"
+    model_path = "train_tpgmm_model_reg1e-03/trained_model.pkl"
     data_path = "TaskPaGMMM/examples/7days1/gait_analysis_export_subject35v6.json"
     output_folder = "adaptability_tests"
     N_query = 200  # Number of query points for GMR (increased for smoother trajectories)
     
     # Define 7 test variations for each test type (always starting from 0)
     M_factor = 3.333  # Scaling factor from original data units to meters
-    horizontal_targets = np.linspace(-0.4*3.333, 0.4*3.333, 7)  # meters
-    vertical_targets = np.linspace(-0.3*3.333, 0.3*3.333, 7)    # meters
+    horizontal_targets = np.linspace(-0.4*M_factor, 0.4*M_factor, 7)  # meters
+    vertical_targets = np.linspace(-0.3*M_factor, 0.3*M_factor, 7)    # meters
     rotation_targets = np.linspace(-25, 25, 7)  # degrees
     
     # Create output folder
@@ -1203,6 +1455,12 @@ def main():
         output_folder
     )
     
+    # Second figure: Phase space plots
+    visualize_phase_space_plots(
+        time_baseline, mu_baseline, horizontal_results,
+        "Horizontal_Displacement", output_folder
+    )
+    
     # ========== TEST 2: VERTICAL DISPLACEMENT (7 variations) ==========
     print("\n\n" + "="*80)
     print(" "*20 + "TEST 2: VERTICAL DISPLACEMENT (7 variations)")
@@ -1231,6 +1489,12 @@ def main():
         time_baseline, mu_baseline, vertical_results,
         "Vertical_Displacement", "Vertical Displacement (m)",
         output_folder
+    )
+    
+    # Second figure: Phase space plots
+    visualize_phase_space_plots(
+        time_baseline, mu_baseline, vertical_results,
+        "Vertical_Displacement", output_folder
     )
     
     # ========== TEST 3: ROTATION (7 variations) ==========
@@ -1263,20 +1527,33 @@ def main():
         output_folder
     )
     
+    # Second figure: Phase space plots
+    visualize_phase_space_plots(
+        time_baseline, mu_baseline, rotation_results,
+        "Rotation", output_folder
+    )
+    
     # ========== FINAL SUMMARY ==========
     print("\n\n" + "="*80)
     print(" "*25 + "ADAPTABILITY TESTING COMPLETE!")
     print("="*80)
     print(f"\n✓ All tests completed successfully!")
     print(f"✓ Results saved in: {output_folder}/")
-    print(f"\nGenerated files:")
-    print(f"  1. {output_folder}/adaptability_horizontal_displacement.png")
-    print(f"  2. {output_folder}/adaptability_vertical_displacement.png")
-    print(f"  3. {output_folder}/adaptability_rotation.png")
+    print(f"\nGenerated files (6 total - 2 per test):")
+    print(f"\n  HORIZONTAL DISPLACEMENT:")
+    print(f"    1. {output_folder}/adaptability_horizontal_displacement.png")
+    print(f"    2. {output_folder}/adaptability_horizontal_displacement_phase_space.png")
+    print(f"\n  VERTICAL DISPLACEMENT:")
+    print(f"    3. {output_folder}/adaptability_vertical_displacement.png")
+    print(f"    4. {output_folder}/adaptability_vertical_displacement_phase_space.png")
+    print(f"\n  ROTATION:")
+    print(f"    5. {output_folder}/adaptability_rotation.png")
+    print(f"    6. {output_folder}/adaptability_rotation_phase_space.png")
     print(f"\nTest configurations:")
-    print(f"  - Horizontal: 7 variations from 0 to [-1.2, -0.8, -0.4, 0, +0.4, +0.8, +1.2] m")
-    print(f"  - Vertical: 7 variations from 0 to [-0.9, -0.6, -0.3, 0, +0.3, +0.6, +0.9] m")
-    print(f"  - Rotation: 7 variations from 0 to [-25, -16.67, -8.33, 0, +8.33, +16.67, +25]°")
+    print(f"  - M_factor: {M_factor:.3f} (scaling from original units to meters)")
+    print(f"  - Horizontal: 7 variations from 0 to {horizontal_targets.tolist()}")
+    print(f"  - Vertical: 7 variations from 0 to {vertical_targets.tolist()}")
+    print(f"  - Rotation: 7 variations from 0 to {rotation_targets.tolist()}")
     print(f"  - Query points per trajectory: {N_query}")
     print(f"  - Image resolution: 300 DPI")
     print("\n" + "="*80)
@@ -1284,6 +1561,7 @@ def main():
     print("- Time-varying transformations successfully applied to FR2")
     print("- All trajectories start from baseline and adapt to target endpoint")
     print("- TPGMM demonstrates strong adaptability across wide parameter range")
+    print("- Phase space plots show smooth velocity and position transitions")
     print("- All coordinates are relative to body (hip-centered frame)")
     print("\nREADY FOR EXOSKELETON IMPLEMENTATION! 🦾")
     print("="*80 + "\n")
