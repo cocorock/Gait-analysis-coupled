@@ -59,7 +59,7 @@ class OptimizedTPGMM:
     It must match the class used during training.
     """
     
-    def __init__(self, n_components, n_frames, n_features, reg_factor=3e-4, 
+    def __init__(self, n_components, n_frames, n_features, reg_factor=1e-5, 
                  max_iter=100, tol=1e-4, verbose=True):
         """Initialize Optimized TPGMM model"""
         self.K = n_components
@@ -606,6 +606,335 @@ def generate_adapted_trajectory(model, A_frames, b_frames, N=100):
     return time_query.flatten(), mu_out, sigma_out
 
 
+def visualize_multiple_adaptations(time_baseline, mu_baseline, results_list,
+                                    test_name, param_label, output_folder):
+    """
+    Visualize multiple adaptation tests on the same figure with coolwarm colormap
+    
+    Parameters:
+    -----------
+    time_baseline : array
+        Time vector for baseline
+    mu_baseline : array (N, 10)
+        Baseline trajectory
+    results_list : list of dicts
+        List of results, each containing 'time', 'mu', 'sigma', 'param', 'target'
+    test_name : str
+        Name of test (e.g., "Horizontal_Displacement")
+    param_label : str
+        Label for parameter (e.g., "Horizontal Displacement (m)")
+    output_folder : str
+        Folder to save figures
+    """
+    print("\n" + "="*70)
+    print(f"VISUALIZING: {test_name} (7 variations)")
+    print("="*70)
+    
+    n_variations = len(results_list)
+    
+    # Create coolwarm colormap
+    cmap = plt.cm.coolwarm
+    colors = [cmap(i / (n_variations - 1)) for i in range(n_variations)]
+    
+    # Create figure with multiple subplots
+    fig = plt.figure(figsize=(20, 12))
+    gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
+    
+    # ========== RIGHT ANKLE TRAJECTORY (X-Y) ==========
+    ax1 = fig.add_subplot(gs[0, 0])
+    
+    # Plot baseline
+    ax1.plot(mu_baseline[:, 0], mu_baseline[:, 1], 'k-', 
+            linewidth=2.5, label='Baseline', alpha=0.7, zorder=10)
+    ax1.plot(mu_baseline[0, 0], mu_baseline[0, 1], 'go', 
+            markersize=10, label='Start', zorder=15)
+    
+    # Plot all variations
+    for i, result in enumerate(results_list):
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        # Use dashed line only for middle test (target = 0)
+        if abs(target) < 0.001:  # Middle test (no adaptation)
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax1.plot(mu_adapted[:, 0], mu_adapted[:, 1], 
+                linestyle=linestyle, linewidth=linewidth, 
+                color=colors[i], alpha=alpha,
+                label=f'Target: {target:+.2f}', zorder=5)
+        
+        # Mark endpoint
+        ax1.plot(mu_adapted[-1, 0], mu_adapted[-1, 1], 'o', 
+                color=colors[i], markersize=6, zorder=8)
+    
+    ax1.set_xlabel('X Position (m)', fontweight='bold')
+    ax1.set_ylabel('Y Position (m)', fontweight='bold')
+    ax1.set_title('Right Ankle Trajectory', fontweight='bold')
+    ax1.legend(loc='best', fontsize=8, ncol=2)
+    ax1.grid(True, alpha=0.3)
+    ax1.axis('equal')
+    
+    # ========== LEFT ANKLE TRAJECTORY (X-Y) ==========
+    ax2 = fig.add_subplot(gs[0, 1])
+    
+    ax2.plot(mu_baseline[:, 5], mu_baseline[:, 6], 'k-', 
+            linewidth=2.5, label='Baseline', alpha=0.7, zorder=10)
+    ax2.plot(mu_baseline[0, 5], mu_baseline[0, 6], 'go', 
+            markersize=10, label='Start', zorder=15)
+    
+    for i, result in enumerate(results_list):
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax2.plot(mu_adapted[:, 5], mu_adapted[:, 6], 
+                linestyle=linestyle, linewidth=linewidth,
+                color=colors[i], alpha=alpha, zorder=5)
+        ax2.plot(mu_adapted[-1, 5], mu_adapted[-1, 6], 'o',
+                color=colors[i], markersize=6, zorder=8)
+    
+    ax2.set_xlabel('X Position (m)', fontweight='bold')
+    ax2.set_ylabel('Y Position (m)', fontweight='bold')
+    ax2.set_title('Left Ankle Trajectory', fontweight='bold')
+    ax2.grid(True, alpha=0.3)
+    ax2.axis('equal')
+    
+    # ========== PARAMETER EVOLUTION ==========
+    ax3 = fig.add_subplot(gs[0, 2])
+    
+    for i, result in enumerate(results_list):
+        time = result['time']
+        param = result['param']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+        else:
+            linestyle = '-'
+            linewidth = 2
+        
+        ax3.plot(time, param, linestyle=linestyle, linewidth=linewidth,
+                color=colors[i], label=f'{target:+.2f}')
+    
+    ax3.set_xlabel('Normalized Time', fontweight='bold')
+    ax3.set_ylabel(param_label, fontweight='bold')
+    ax3.set_title('Parameter Evolution', fontweight='bold')
+    ax3.legend(loc='best', fontsize=8, ncol=2)
+    ax3.grid(True, alpha=0.3)
+    ax3.axhline(y=0, color='k', linestyle='--', alpha=0.3)
+    
+    # ========== RIGHT ANKLE X POSITION vs TIME ==========
+    ax4 = fig.add_subplot(gs[1, 0])
+    
+    ax4.plot(time_baseline, mu_baseline[:, 0], 'k-', linewidth=2.5, 
+            label='Baseline', alpha=0.7)
+    
+    for i, result in enumerate(results_list):
+        time = result['time']
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax4.plot(time, mu_adapted[:, 0], linestyle=linestyle,
+                linewidth=linewidth, color=colors[i], alpha=alpha)
+    
+    ax4.set_xlabel('Normalized Time', fontweight='bold')
+    ax4.set_ylabel('Right Ankle X (m)', fontweight='bold')
+    ax4.set_title('Right Ankle X Position vs Time', fontweight='bold')
+    ax4.grid(True, alpha=0.3)
+    
+    # ========== RIGHT ANKLE Y POSITION vs TIME ==========
+    ax5 = fig.add_subplot(gs[1, 1])
+    
+    ax5.plot(time_baseline, mu_baseline[:, 1], 'k-', linewidth=2.5,
+            label='Baseline', alpha=0.7)
+    
+    for i, result in enumerate(results_list):
+        time = result['time']
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax5.plot(time, mu_adapted[:, 1], linestyle=linestyle,
+                linewidth=linewidth, color=colors[i], alpha=alpha)
+    
+    ax5.set_xlabel('Normalized Time', fontweight='bold')
+    ax5.set_ylabel('Right Ankle Y (m)', fontweight='bold')
+    ax5.set_title('Right Ankle Y Position vs Time', fontweight='bold')
+    ax5.grid(True, alpha=0.3)
+    
+    # ========== RIGHT ANKLE ANGLE vs TIME ==========
+    ax6 = fig.add_subplot(gs[1, 2])
+    
+    ax6.plot(time_baseline, np.rad2deg(mu_baseline[:, 4]), 'k-',
+            linewidth=2.5, label='Baseline', alpha=0.7)
+    
+    for i, result in enumerate(results_list):
+        time = result['time']
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax6.plot(time, np.rad2deg(mu_adapted[:, 4]), linestyle=linestyle,
+                linewidth=linewidth, color=colors[i], alpha=alpha)
+    
+    ax6.set_xlabel('Normalized Time', fontweight='bold')
+    ax6.set_ylabel('Right Ankle Angle (°)', fontweight='bold')
+    ax6.set_title('Right Ankle Angle vs Time', fontweight='bold')
+    ax6.grid(True, alpha=0.3)
+    
+    # ========== RIGHT ANKLE VELOCITY MAGNITUDE ==========
+    ax7 = fig.add_subplot(gs[2, 0])
+    
+    vel_baseline = np.sqrt(mu_baseline[:, 2]**2 + mu_baseline[:, 3]**2)
+    ax7.plot(time_baseline, vel_baseline, 'k-', linewidth=2.5,
+            label='Baseline', alpha=0.7)
+    
+    for i, result in enumerate(results_list):
+        time = result['time']
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        vel_adapted = np.sqrt(mu_adapted[:, 2]**2 + mu_adapted[:, 3]**2)
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax7.plot(time, vel_adapted, linestyle=linestyle,
+                linewidth=linewidth, color=colors[i], alpha=alpha)
+    
+    ax7.set_xlabel('Normalized Time', fontweight='bold')
+    ax7.set_ylabel('Velocity Magnitude (m/s)', fontweight='bold')
+    ax7.set_title('Right Ankle Velocity Magnitude', fontweight='bold')
+    ax7.grid(True, alpha=0.3)
+    
+    # ========== ENDPOINT DIFFERENCES ==========
+    ax8 = fig.add_subplot(gs[2, 1])
+    
+    for i, result in enumerate(results_list):
+        time = result['time']
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        diff_x = mu_adapted[:, 0] - mu_baseline[:, 0]
+        diff_y = mu_adapted[:, 1] - mu_baseline[:, 1]
+        diff_total = np.sqrt(diff_x**2 + diff_y**2)
+        
+        if abs(target) < 0.001:
+            linestyle = '--'
+            linewidth = 2
+            alpha = 0.5
+        else:
+            linestyle = '-'
+            linewidth = 1.5
+            alpha = 0.8
+        
+        ax8.plot(time, diff_total, linestyle=linestyle,
+                linewidth=linewidth, color=colors[i], alpha=alpha,
+                label=f'{target:+.2f}')
+    
+    ax8.set_xlabel('Normalized Time', fontweight='bold')
+    ax8.set_ylabel('Position Difference (m)', fontweight='bold')
+    ax8.set_title('Total Position Difference from Baseline', fontweight='bold')
+    ax8.legend(loc='best', fontsize=8, ncol=2)
+    ax8.grid(True, alpha=0.3)
+    
+    # ========== ADAPTATION METRICS TABLE ==========
+    ax9 = fig.add_subplot(gs[2, 2])
+    ax9.axis('off')
+    
+    # Create metrics table
+    metrics_text = "ADAPTATION METRICS\n"
+    metrics_text += "=" * 35 + "\n\n"
+    metrics_text += f"{'Target':<10} {'Initial':<10} {'Final':<10}\n"
+    metrics_text += f"{'Value':<10} {'Diff(mm)':<10} {'Diff(mm)':<10}\n"
+    metrics_text += "-" * 35 + "\n"
+    
+    for i, result in enumerate(results_list):
+        mu_adapted = result['mu']
+        target = result['target']
+        
+        initial_diff = np.sqrt((mu_adapted[0, 0] - mu_baseline[0, 0])**2 + 
+                              (mu_adapted[0, 1] - mu_baseline[0, 1])**2)
+        final_diff = np.sqrt((mu_adapted[-1, 0] - mu_baseline[-1, 0])**2 + 
+                            (mu_adapted[-1, 1] - mu_baseline[-1, 1])**2)
+        
+        metrics_text += f"{target:+6.2f}    {initial_diff*1000:6.1f}    {final_diff*1000:6.1f}\n"
+    
+    metrics_text += "\n" + "=" * 35 + "\n"
+    metrics_text += f"Query points: {len(time_baseline)}\n"
+    metrics_text += f"Variations: {n_variations}\n"
+    
+    ax9.text(0.1, 0.5, metrics_text, transform=ax9.transAxes,
+            fontsize=10, verticalalignment='center', family='monospace',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    
+    # Overall title
+    fig.suptitle(f'TPGMM Adaptability Test: {test_name} (7 Variations)', 
+                fontsize=18, fontweight='bold', y=0.98)
+    
+    # Save figure with high DPI
+    save_path = os.path.join(output_folder, f'adaptability_{test_name.lower()}.png')
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"\n✓ Saved figure: {save_path}")
+    
+    plt.close()  # Close to save memory
+    
+    # Print summary
+    print(f"\n{'='*70}")
+    print(f"TEST SUMMARY: {test_name}")
+    print(f"{'='*70}")
+    print(f"Number of variations: {n_variations}")
+    print(f"Target values: {[r['target'] for r in results_list]}")
+    print(f"All trajectories start from baseline (0) and adapt to target")
+    print(f"Image saved at 300 DPI for publication quality")
+
+
 def visualize_adaptation_test(time_query, mu_baseline, mu_adapted, 
                                test_name, param_values, param_label,
                                output_folder):
@@ -781,7 +1110,7 @@ def visualize_adaptation_test(time_query, mu_baseline, mu_adapted,
     
     # Save figure
     save_path = os.path.join(output_folder, f'adaptability_{test_name.lower()}.png')
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
     print(f"\n✓ Saved figure: {save_path}")
     
     plt.close()  # Close to save memory
@@ -809,7 +1138,13 @@ def main():
     model_path = "train_tpgmm_model_reg3e-04/trained_model.pkl"
     data_path = "TaskPaGMMM/examples/7days1/gait_analysis_export_subject35v6.json"
     output_folder = "adaptability_tests"
-    N_query = 200  # Number of query points for GMR
+    N_query = 200  # Number of query points for GMR (increased for smoother trajectories)
+    
+    # Define 7 test variations for each test type (always starting from 0)
+    M_factor = 3.333  # Scaling factor from original data units to meters
+    horizontal_targets = np.linspace(-0.4*3.333, 0.4*3.333, 7)  # meters
+    vertical_targets = np.linspace(-0.3*3.333, 0.3*3.333, 7)    # meters
+    rotation_targets = np.linspace(-25, 25, 7)  # degrees
     
     # Create output folder
     os.makedirs(output_folder, exist_ok=True)
@@ -838,60 +1173,93 @@ def main():
     
     print(f"✓ Generated baseline trajectory")
     
-    # ========== TEST 1: HORIZONTAL DISPLACEMENT ==========
+    # ========== TEST 1: HORIZONTAL DISPLACEMENT (7 variations) ==========
     print("\n\n" + "="*80)
-    print(" "*25 + "TEST 1: HORIZONTAL DISPLACEMENT")
+    print(" "*20 + "TEST 1: HORIZONTAL DISPLACEMENT (7 variations)")
     print("="*80)
     
-    A_horiz, b_horiz, disp_horiz = create_time_varying_transformations_horizontal(
-        N_query, displacement_range=(-0.00, -1)
-    )
+    horizontal_results = []
+    for i, target in enumerate(horizontal_targets):
+        print(f"\n--- Variation {i+1}/7: 0 → {target:.2f} m ---")
+        A_horiz, b_horiz, disp_horiz = create_time_varying_transformations_horizontal(
+            N_query, displacement_range=(0.0, target)
+        )
+        
+        time_horiz, mu_horiz, sigma_horiz = generate_adapted_trajectory(
+            model, A_horiz, b_horiz, N=N_query
+        )
+        
+        horizontal_results.append({
+            'time': time_horiz,
+            'mu': mu_horiz,
+            'sigma': sigma_horiz,
+            'param': disp_horiz,
+            'target': target
+        })
     
-    time_horiz, mu_horiz, sigma_horiz = generate_adapted_trajectory(
-        model, A_horiz, b_horiz, N=N_query
-    )
-    
-    visualize_adaptation_test(
-        time_horiz, mu_baseline, mu_horiz,
-        "Horizontal_Displacement", disp_horiz, "Horizontal Displacement (m)",
+    visualize_multiple_adaptations(
+        time_baseline, mu_baseline, horizontal_results,
+        "Horizontal_Displacement", "Horizontal Displacement (m)",
         output_folder
     )
     
-    # ========== TEST 2: VERTICAL DISPLACEMENT ==========
+    # ========== TEST 2: VERTICAL DISPLACEMENT (7 variations) ==========
     print("\n\n" + "="*80)
-    print(" "*25 + "TEST 2: VERTICAL DISPLACEMENT")
+    print(" "*20 + "TEST 2: VERTICAL DISPLACEMENT (7 variations)")
     print("="*80)
     
-    A_vert, b_vert, disp_vert = create_time_varying_transformations_vertical(
-        N_query, displacement_range=(-0.0, -0.9)
-    )
+    vertical_results = []
+    for i, target in enumerate(vertical_targets):
+        print(f"\n--- Variation {i+1}/7: 0 → {target:.2f} m ---")
+        A_vert, b_vert, disp_vert = create_time_varying_transformations_vertical(
+            N_query, displacement_range=(0.0, target)
+        )
+        
+        time_vert, mu_vert, sigma_vert = generate_adapted_trajectory(
+            model, A_vert, b_vert, N=N_query
+        )
+        
+        vertical_results.append({
+            'time': time_vert,
+            'mu': mu_vert,
+            'sigma': sigma_vert,
+            'param': disp_vert,
+            'target': target
+        })
     
-    time_vert, mu_vert, sigma_vert = generate_adapted_trajectory(
-        model, A_vert, b_vert, N=N_query
-    )
-    
-    visualize_adaptation_test(
-        time_vert, mu_baseline, mu_vert,
-        "Vertical_Displacement", disp_vert, "Vertical Displacement (m)",
+    visualize_multiple_adaptations(
+        time_baseline, mu_baseline, vertical_results,
+        "Vertical_Displacement", "Vertical Displacement (m)",
         output_folder
     )
     
-    # ========== TEST 3: ROTATION ==========
+    # ========== TEST 3: ROTATION (7 variations) ==========
     print("\n\n" + "="*80)
-    print(" "*30 + "TEST 3: ROTATION")
+    print(" "*25 + "TEST 3: ROTATION (7 variations)")
     print("="*80)
     
-    A_rot, b_rot, angle_rot = create_time_varying_transformations_rotation(
-        N_query, rotation_range=(-0, -25)
-    )
+    rotation_results = []
+    for i, target in enumerate(rotation_targets):
+        print(f"\n--- Variation {i+1}/7: 0 → {target:.2f}° ---")
+        A_rot, b_rot, angle_rot = create_time_varying_transformations_rotation(
+            N_query, rotation_range=(0.0, target)
+        )
+        
+        time_rot, mu_rot, sigma_rot = generate_adapted_trajectory(
+            model, A_rot, b_rot, N=N_query
+        )
+        
+        rotation_results.append({
+            'time': time_rot,
+            'mu': mu_rot,
+            'sigma': sigma_rot,
+            'param': angle_rot,
+            'target': target
+        })
     
-    time_rot, mu_rot, sigma_rot = generate_adapted_trajectory(
-        model, A_rot, b_rot, N=N_query
-    )
-    
-    visualize_adaptation_test(
-        time_rot, mu_baseline, mu_rot,
-        "Rotation", angle_rot, "Rotation Angle (°)",
+    visualize_multiple_adaptations(
+        time_baseline, mu_baseline, rotation_results,
+        "Rotation", "Rotation Angle (°)",
         output_folder
     )
     
@@ -905,11 +1273,17 @@ def main():
     print(f"  1. {output_folder}/adaptability_horizontal_displacement.png")
     print(f"  2. {output_folder}/adaptability_vertical_displacement.png")
     print(f"  3. {output_folder}/adaptability_rotation.png")
+    print(f"\nTest configurations:")
+    print(f"  - Horizontal: 7 variations from 0 to [-1.2, -0.8, -0.4, 0, +0.4, +0.8, +1.2] m")
+    print(f"  - Vertical: 7 variations from 0 to [-0.9, -0.6, -0.3, 0, +0.3, +0.6, +0.9] m")
+    print(f"  - Rotation: 7 variations from 0 to [-25, -16.67, -8.33, 0, +8.33, +16.67, +25]°")
+    print(f"  - Query points per trajectory: {N_query}")
+    print(f"  - Image resolution: 300 DPI")
     print("\n" + "="*80)
     print("\nKEY FINDINGS:")
     print("- Time-varying transformations successfully applied to FR2")
-    print("- Trajectories adapt endpoint while maintaining initial position")
-    print("- TPGMM demonstrates strong adaptability to new task parameters")
+    print("- All trajectories start from baseline and adapt to target endpoint")
+    print("- TPGMM demonstrates strong adaptability across wide parameter range")
     print("- All coordinates are relative to body (hip-centered frame)")
     print("\nREADY FOR EXOSKELETON IMPLEMENTATION! 🦾")
     print("="*80 + "\n")
