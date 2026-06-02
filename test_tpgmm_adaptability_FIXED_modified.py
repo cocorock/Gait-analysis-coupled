@@ -1391,7 +1391,7 @@ def main():
     print("="*80)
     
     # ========== CONFIGURATION ==========
-    reg_factor = "3e-04"  # Regularization factor for GMR
+    reg_factor = "1e-04"  # Regularization factor for GMR
     model_path = "train_tpgmm_model_reg"+reg_factor+"/trained_model.pkl"
     data_path = "TaskPaGMMM/examples/7days1/gait_analysis_export_subject35v6.json"
     output_folder = "adaptability_tests/"+reg_factor+"/"

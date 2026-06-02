@@ -63,7 +63,7 @@ class OptimizedTPGMM:
     - Numerical stability with log-space operations
     """
     
-    def __init__(self, n_components, n_frames, n_features, reg_factor=5e-4, 
+    def __init__(self, n_components, n_frames, n_features, reg_factor=3e-4, 
                  max_iter=100, tol=1e-4, verbose=True):
         """Initialize Optimized TPGMM model"""
         self.K = n_components
@@ -419,7 +419,7 @@ class OptimizedGMR:
         return mu_out, sigma_out
 
 
-def train_single_model(K, X_frames, reg_factor=5e-4, verbose=False):
+def train_single_model(K, X_frames, reg_factor=3e-4, verbose=False):
     """Train a single TPGMM model (for parallel execution)"""
     n_frames = X_frames.shape[0]
     n_features = X_frames.shape[2]
@@ -440,7 +440,7 @@ def train_single_model(K, X_frames, reg_factor=5e-4, verbose=False):
     return K, model, bic, log_likelihood
 
 
-def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_factor=5e-4):
+def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_factor=3e-4):
     """
     Train multiple TPGMM models IN PARALLEL and select best via BIC
     
@@ -488,7 +488,7 @@ def train_tpgmm_parallel(X_frames, component_range=range(3, 21), n_jobs=-1, reg_
     return best_model, results_dict
 
 
-def train_tpgmm_sequential(X_frames, component_range=range(3, 21), reg_factor=5e-4):
+def train_tpgmm_sequential(X_frames, component_range=range(3, 21), reg_factor=3e-4):
     """
     Train multiple TPGMM models SEQUENTIALLY and select best via BIC
     
@@ -1553,7 +1553,7 @@ def main(data_path, subsample_factor=10, n_jobs=-1, use_parallel=True):
 
 if __name__ == "__main__":
     # Configuration
-    data_path = "TaskPaGMMM\\examples\\7days1\\gait_analysis_export_subject35v6.json"
+    data_path = "TaskPaGMMM\\examples\\7days1\\gait_analysis_export_subject35v8.json"
     subsample_factor = 1  # Adjust as needed
     n_jobs = -1  # Use all CPU cores (only used if use_parallel=True)
     
